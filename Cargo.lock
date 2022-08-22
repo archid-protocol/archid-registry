@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "archway-nameservice"
+name = "archid-registry"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",

@@ -50,13 +50,13 @@ pub fn execute_register(
     name: String,
 ) -> Result<Response, ContractError> {
     validate_name(&name)?;
-    let key = name.as_bytes();
-    let record = NameRecord { owner: info.sender };
+    let key = &name.as_bytes();
+    let record = NameRecord { owner: info.sender.clone() };
     if (resolver(deps.storage).may_load(key)?).is_some() {
         return Err(ContractError::NameTaken { name });
     }
     let c:Config =config_read(deps.storage).load()?;
-    mintHandler(name,info.sender,c.cw721);
+    mintHandler(name.clone(),info.sender,c.cw721);
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
@@ -80,17 +80,23 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let resp = ResolveRecordResponse { address };
     to_binary(&resp)
 }
-
+fn update_resolver( info: MessageInfo,deps: DepsMut, _env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+    let key = name.as_bytes();
+    let record = NameRecord { owner: new_resolver };
+    resolver(deps.storage).save(key, &record)?;
+    Ok(Response::default())
+}
 // let's not import a regexp library and just do these checks by hand
 fn invalid_char(c: char) -> bool {
     let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '.' || c == '-' || c == '_');
     !is_valid
 }
 fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
-    let mint_msg = Cw721ExecuteMsg::Mint(MintMsg::<Option<Empty>> {
+    let mint_msg = Cw721ExecuteMsg::Mint(MintMsg::<Extension> {
         token_id:name,
         owner: creator.to_string(),
-        token_uri:Some(String::from("test"))        
+        token_uri:Some(String::from("test")),
+        extension: None,     
     });
 
     let resp = CosmosMsg::Wasm(WasmMsg::Execute {
@@ -100,16 +106,18 @@ fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     });
     Ok(resp)
 }
-fn query_name_owner(id:String,cw721:Addr,deps: Deps) ->(){
+fn query_name_owner(id:String,cw721:Addr,deps: Deps) ->Result<OwnerOfResponse,StdError>{
     let query_msg = Cw721QueryMsg::OwnerOf {
         token_id: id.clone(),
         include_expired: None,
     };
-    let r=QueryRequest::<OwnerOfResponse>::Wasm(WasmQuery::Smart {
+    let req=QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: cw721.to_string(),
         msg: to_binary(&query_msg).unwrap(),
     });
-    r.unwrap()
+    let res: OwnerOfResponse = deps.querier.query(&req)?;
+    Ok(res)
+
 }
 /// validate_name returns an error if the name is invalid
 /// (we require 3-64 lowercase ascii letters, numbers, or . - _)
