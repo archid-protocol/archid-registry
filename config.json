@@ -1,0 +1,46 @@
+{
+  "name": "archid-registry",
+  "developer": {
+    "archwayd": {
+      "docker": true
+    },
+    "scripts": {
+      "test": "cargo unit-test",
+      "build": "cargo build",
+      "optimize": "cargo run-script optimize",
+      "wasm": "cargo wasm",
+      "query": "archwayd query wasm",
+      "tx": "archwayd tx wasm execute"
+    },
+    "deployments": [      
+    ]
+  },
+  "network": {
+    "name": "constantine",
+    "chainId": "constantine-1",
+    "type": "testnet",
+    "fees": {
+      "feeDenom": "uconst"
+    },
+    "gas": {
+      "prices": "0.002uconst",
+      "mode": "auto",
+      "adjustment": "1.3"
+    },
+    "wasm": {
+      "bech32Hrp": "archway",
+      "archwayd": "0.0.4",
+      "configDir": ".archway",
+      "binary": "archwayd"
+    },
+    "urls": {
+      "rpc": {
+        "url": "https://rpc.constantine-1.archway.tech",
+        "port": 443
+      },
+      "faucets": [
+        "https://faucet.torii-1.archway.tech"
+      ]
+    }
+  }
+}
