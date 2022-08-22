@@ -11,7 +11,8 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Register { name: String },
-    
+    UpdateResolver {name: String, new_resolver:Addr},
+    RegisterSubDomain {domain: String,subdomain: String, new_resolver:Addr}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

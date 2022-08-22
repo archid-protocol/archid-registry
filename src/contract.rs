@@ -40,6 +40,8 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Register { name } => execute_register(deps, env, info, name),
+        ExecuteMsg::UpdateResolver {name,new_resolver} =>update_resolver(info,deps, env, name,new_resolver),
+        ExecuteMsg::RegisterSubDomain {domain,subdomain, new_resolver}=> set_subdomain( info,deps,env, domain,subdomain, new_resolver),
     }
 }
 
@@ -56,13 +58,38 @@ pub fn execute_register(
         return Err(ContractError::NameTaken { name });
     }
     let c:Config =config_read(deps.storage).load()?;
-    mintHandler(name.clone(),info.sender,c.cw721);
+    mintHandler(name.clone(),info.sender,c.cw721)?;
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
 
 
-
+fn update_resolver( info: MessageInfo,deps: DepsMut, env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+    let c:Config =config_read(deps.storage).load()?;
+    let owner_response=query_name_owner(&name,c.cw721,&deps).unwrap();
+    if owner_response.owner!=info.sender {
+        return Err(ContractError::Unauthorized{});      
+    }
+    
+    let key = name.as_bytes();
+    let record = NameRecord { owner: new_resolver };
+    resolver(deps.storage).save(key, &record)?;
+    Ok(Response::default())
+}
+fn set_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subdomain: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+    validate_name(&subdomain)?;
+    let c:Config =config_read(deps.storage).load()?;
+    
+    let owner_response=query_name_owner(&domain,c.cw721,&deps).unwrap();
+    if owner_response.owner!=info.sender {
+        return Err(ContractError::Unauthorized{});      
+    }
+    let domain_route = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let record = NameRecord { owner: new_resolver };
+    resolver(deps.storage).save(key, &record)?;
+    Ok(Response::default())
+}
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -80,21 +107,10 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let resp = ResolveRecordResponse { address };
     to_binary(&resp)
 }
-fn update_resolver( info: MessageInfo,deps: DepsMut, _env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
-    let c:Config =config_read(deps.storage).load()?;
-    let owner_response=query_name_owner(&name,c.cw721,&deps).unwrap();
-    if(owner_response.owner!=info.sender){
-        return Err(ContractError::Unauthorized{});      
-    }
-    
-    let key = name.as_bytes();
-    let record = NameRecord { owner: new_resolver };
-    resolver(deps.storage).save(key, &record)?;
-    Ok(Response::default())
-}
+
 // let's not import a regexp library and just do these checks by hand
 fn invalid_char(c: char) -> bool {
-    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '.' || c == '-' || c == '_');
+    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (  c == '-' || c == '_');
     !is_valid
 }
 fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
