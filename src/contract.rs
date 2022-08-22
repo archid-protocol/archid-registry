@@ -81,6 +81,12 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     to_binary(&resp)
 }
 fn update_resolver( info: MessageInfo,deps: DepsMut, _env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+    let c:Config =config_read(deps.storage).load()?;
+    let owner_response=query_name_owner(&name,c.cw721,&deps).unwrap();
+    if(owner_response.owner!=info.sender){
+        return Err(ContractError::Unauthorized{});      
+    }
+    
     let key = name.as_bytes();
     let record = NameRecord { owner: new_resolver };
     resolver(deps.storage).save(key, &record)?;
@@ -106,7 +112,7 @@ fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     });
     Ok(resp)
 }
-fn query_name_owner(id:String,cw721:Addr,deps: Deps) ->Result<OwnerOfResponse,StdError>{
+fn query_name_owner(id:&String,cw721:Addr,deps: &DepsMut) ->Result<OwnerOfResponse,StdError>{
     let query_msg = Cw721QueryMsg::OwnerOf {
         token_id: id.clone(),
         include_expired: None,
