@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Binary,Empty, Deps, DepsMut,QueryRequest, Env,Addr, MessageInfo, Response, StdError, StdResult,CosmosMsg,WasmMsg,WasmQuery
+    entry_point, to_binary, Binary, Deps, DepsMut,QueryRequest, Env,Addr, MessageInfo, Response, StdError, StdResult,CosmosMsg,WasmMsg,WasmQuery
 };
 
 use cw721_base::{
@@ -25,7 +25,9 @@ pub fn instantiate(
 ) -> Result<Response, StdError> {
     let config_state = Config {
         admin: deps.api.addr_validate(&msg.admin)?.into_string(),
-        cw721:msg.cw721
+        cw721:msg.cw721,
+        base_cost:msg.base_cost,
+        base_expiration:msg.base_expiration
     };
     config(deps.storage).save(&config_state)?;
     Ok(Response::default())
@@ -58,7 +60,7 @@ pub fn execute_register(
         return Err(ContractError::NameTaken { name });
     }
     let c:Config =config_read(deps.storage).load()?;
-    mintHandler(name.clone(),info.sender,c.cw721)?;
+    mint_handler(name.clone(),info.sender,c.cw721)?;
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
@@ -90,6 +92,22 @@ fn set_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subd
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
+fn mint_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subdomain: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+    validate_name(&subdomain)?;
+    let c:Config =config_read(deps.storage).load()?;
+    
+    let owner_response=query_name_owner(&domain,c.cw721.clone(),&deps).unwrap();
+    if owner_response.owner!=info.sender {
+        return Err(ContractError::Unauthorized{});      
+    }
+    let domain_route = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let record = NameRecord { owner: new_resolver.clone() };
+    resolver(deps.storage).save(key, &record)?;
+    mint_handler(domain_route,new_resolver,c.cw721)?;
+    Ok(Response::default())
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -113,7 +131,7 @@ fn invalid_char(c: char) -> bool {
     let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (  c == '-' || c == '_');
     !is_valid
 }
-fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
+fn mint_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     let mint_msg = Cw721ExecuteMsg::Mint(MintMsg::<Extension> {
         token_id:name,
         owner: creator.to_string(),
@@ -124,6 +142,19 @@ fn mintHandler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     let resp = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&mint_msg)?,
+        funds: vec![],
+    });
+    Ok(resp)
+}
+fn burn_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
+    let token_id=name;
+    let burn_msg: Cw721ExecuteMsg<String> = Cw721ExecuteMsg::Burn {
+        token_id        
+    };
+
+    let resp = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&burn_msg)?,
         funds: vec![],
     });
     Ok(resp)

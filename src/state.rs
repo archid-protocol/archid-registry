@@ -13,7 +13,9 @@ pub static CONFIG_KEY: &[u8] = b"config";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: String,
-    pub cw721:Addr
+    pub cw721:Addr,
+    pub base_cost:u64,
+    pub base_expiration:u64
 }
 
 pub fn config(storage: &mut dyn Storage) -> Singleton<Config> {
