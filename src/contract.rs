@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut,QueryRequest, Env,Addr, MessageInfo, Response, StdError, StdResult,CosmosMsg,WasmMsg,WasmQuery
 };
-
+use std::ops::Add;
 use cw721_base::{
     msg::ExecuteMsg as Cw721ExecuteMsg, Extension,
     MintMsg,msg::QueryMsg as Cw721QueryMsg
@@ -9,6 +9,7 @@ use cw721_base::{
 use cw721::{
     OwnerOfResponse
 };
+use cw_utils::{Expiration,Duration};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
 use crate::state::{config, config_read, resolver, resolver_read, Config, NameRecord};
@@ -43,7 +44,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Register { name } => execute_register(deps, env, info, name),
         ExecuteMsg::UpdateResolver {name,new_resolver} =>update_resolver(info,deps, env, name,new_resolver),
-        ExecuteMsg::RegisterSubDomain {domain,subdomain, new_resolver}=> set_subdomain( info,deps,env, domain,subdomain, new_resolver),
+        ExecuteMsg::RegisterSubDomain {domain,subdomain, new_resolver,mint,expiration}=> set_subdomain( info,deps,env, domain,subdomain, new_resolver,mint,expiration),
     }
 }
 
@@ -55,58 +56,53 @@ pub fn execute_register(
 ) -> Result<Response, ContractError> {
     validate_name(&name)?;
     let key = &name.as_bytes();
-    let record = NameRecord { owner: info.sender.clone() };
+    
     if (resolver(deps.storage).may_load(key)?).is_some() {
         return Err(ContractError::NameTaken { name });
     }
     let c:Config =config_read(deps.storage).load()?;
-    mint_handler(name.clone(),info.sender,c.cw721)?;
+    // add payment using cw-utils must pay base fee
+    // sends funds to dao escrow contract
+    let record = NameRecord { owner: info.sender.clone(),expiration:c.base_expiration.add(cw_utils::Duration::Height(_env.block.time.seconds())).unwrap() };
+    mint_handler(&name,&info.sender,&c.cw721)?;
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
 
+// add reregister function so owners can extend their 
 
 fn update_resolver( info: MessageInfo,deps: DepsMut, env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
     let c:Config =config_read(deps.storage).load()?;
-    let owner_response=query_name_owner(&name,c.cw721,&deps).unwrap();
+    let owner_response=query_name_owner(&name,&c.cw721,&deps).unwrap();
     if owner_response.owner!=info.sender {
         return Err(ContractError::Unauthorized{});      
     }
     
     let key = name.as_bytes();
-    let record = NameRecord { owner: new_resolver };
+    let record = NameRecord { owner: new_resolver ,expiration:c.base_expiration.add(cw_utils::Duration::Height(env.block.time.seconds())).unwrap()};
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
-fn set_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subdomain: String, new_resolver:Addr) -> Result<Response, ContractError>  {
+fn set_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subdomain: String, new_resolver:Addr,mint:bool,expiration:Expiration) -> Result<Response, ContractError>  {
+    validate_name(&domain)?;
     validate_name(&subdomain)?;
     let c:Config =config_read(deps.storage).load()?;
     
-    let owner_response=query_name_owner(&domain,c.cw721,&deps).unwrap();
+    let owner_response=query_name_owner(&domain,&c.cw721,&deps).unwrap();
     if owner_response.owner!=info.sender {
         return Err(ContractError::Unauthorized{});      
     }
     let domain_route = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
-    let record = NameRecord { owner: new_resolver };
-    resolver(deps.storage).save(key, &record)?;
-    Ok(Response::default())
-}
-fn mint_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subdomain: String, new_resolver:Addr) -> Result<Response, ContractError>  {
-    validate_name(&subdomain)?;
-    let c:Config =config_read(deps.storage).load()?;
     
-    let owner_response=query_name_owner(&domain,c.cw721.clone(),&deps).unwrap();
-    if owner_response.owner!=info.sender {
-        return Err(ContractError::Unauthorized{});      
+    if mint{
+        mint_handler(&domain_route,&new_resolver,&c.cw721)?;
     }
-    let domain_route = format!("{}.{}", subdomain, domain);
-    let key = domain_route.as_bytes();
-    let record = NameRecord { owner: new_resolver.clone() };
+    let record = NameRecord { owner: new_resolver,expiration:c.base_expiration.add(cw_utils::Duration::Height(env.block.time.seconds())).unwrap() };
     resolver(deps.storage).save(key, &record)?;
-    mint_handler(domain_route,new_resolver,c.cw721)?;
     Ok(Response::default())
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
@@ -131,9 +127,9 @@ fn invalid_char(c: char) -> bool {
     let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (  c == '-' || c == '_');
     !is_valid
 }
-fn mint_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
+fn mint_handler(name:&String,creator:&Addr,cw721:&Addr) -> StdResult<CosmosMsg>{
     let mint_msg = Cw721ExecuteMsg::Mint(MintMsg::<Extension> {
-        token_id:name,
+        token_id:name.to_string(),
         owner: creator.to_string(),
         token_uri:Some(String::from("test")),
         extension: None,     
@@ -146,12 +142,11 @@ fn mint_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     });
     Ok(resp)
 }
-fn burn_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
-    let token_id=name;
+fn burn_handler(name:String,cw721:Addr) -> StdResult<CosmosMsg>{
+  
     let burn_msg: Cw721ExecuteMsg<String> = Cw721ExecuteMsg::Burn {
-        token_id        
+        token_id:name        
     };
-
     let resp = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&burn_msg)?,
@@ -159,7 +154,7 @@ fn burn_handler(name:String,creator:Addr,cw721:Addr) -> StdResult<CosmosMsg>{
     });
     Ok(resp)
 }
-fn query_name_owner(id:&String,cw721:Addr,deps: &DepsMut) ->Result<OwnerOfResponse,StdError>{
+fn query_name_owner(id:&String,cw721:&Addr,deps: &DepsMut) ->Result<OwnerOfResponse,StdError>{
     let query_msg = Cw721QueryMsg::OwnerOf {
         token_id: id.clone(),
         include_expired: None,
