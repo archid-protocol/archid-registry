@@ -26,6 +26,7 @@ pub fn instantiate(
 ) -> Result<Response, StdError> {
     let config_state = Config {
         admin: deps.api.addr_validate(&msg.admin)?.into_string(),
+        wallet:msg.wallet,
         cw721:msg.cw721,
         base_cost:msg.base_cost,
         base_expiration:msg.base_expiration
@@ -56,13 +57,14 @@ pub fn execute_register(
 ) -> Result<Response, ContractError> {
     validate_name(&name)?;
     let key = &name.as_bytes();
-    
-    if (resolver(deps.storage).may_load(key)?).is_some() {
-        return Err(ContractError::NameTaken { name });
+    let curr=resolver(deps.storage).may_load(key)?;
+    if (curr).is_some() {
+        if !curr.unwrap().is_expired(&_env.block){
+            return Err(ContractError::NameTaken { name });
+        }
+        
     }
     let c:Config =config_read(deps.storage).load()?;
-    // add payment using cw-utils must pay base fee
-    // sends funds to dao escrow contract
     let record = NameRecord { owner: info.sender.clone(),expiration:c.base_expiration.add(cw_utils::Duration::Height(_env.block.time.seconds())).unwrap() };
     mint_handler(&name,&info.sender,&c.cw721)?;
     resolver(deps.storage).save(key, &record)?;

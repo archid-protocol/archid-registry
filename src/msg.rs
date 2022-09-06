@@ -5,6 +5,7 @@ use cw_utils::Expiration;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: String,
+    pub wallet:Addr,
     pub cw721: Addr,
     pub base_cost:u64,
     pub base_expiration:Expiration
