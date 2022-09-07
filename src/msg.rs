@@ -2,22 +2,26 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{Addr};
 use cw_utils::Expiration;
+use crate::state::Config;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: String,
     pub wallet:Addr,
     pub cw721: Addr,
     pub base_cost:u64,
-    pub base_expiration:Expiration
+    pub base_expiration:u64
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Register { name: String },
+    RenewRegistration {name: String},
     UpdateResolver {name: String, new_resolver:Addr},
-    RegisterSubDomain {domain: String,subdomain: String, new_resolver:Addr,mint:bool,expiration:Expiration}
     
+    RegisterSubDomain {domain: String,subdomain: String, new_resolver:Addr,mint:bool,expiration:Expiration},
+    UpdateConfig {update_config:Config}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

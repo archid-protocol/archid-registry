@@ -16,9 +16,8 @@ pub struct Config {
     pub wallet:Addr,
     pub cw721:Addr,
     pub base_cost:u64,
-    pub base_expiration:Expiration
+    pub base_expiration:u64
 }
-
 pub fn config(storage: &mut dyn Storage) -> Singleton<Config> {
     singleton(storage, CONFIG_KEY)
 }
@@ -33,11 +32,11 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<Config> {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NameRecord {
     pub owner: Addr,
-    pub expiration:Expiration
+    pub expiration:u64
 }
 impl NameRecord {
     pub fn is_expired(&self, block: &BlockInfo) -> bool {
-        self.expiration.is_expired(block)
+        Expiration::AtHeight(self.expiration).is_expired(block)
     }
 }
 pub fn resolver(storage: &mut dyn Storage) -> Bucket<NameRecord> {

@@ -9,7 +9,8 @@ use cw721_base::{
 use cw721::{
     OwnerOfResponse
 };
-use cw_utils::{Expiration,Duration};
+use cw_utils::{Expiration,Duration,must_pay};
+
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ResolveRecordResponse};
 use crate::state::{config, config_read, resolver, resolver_read, Config, NameRecord};
@@ -44,8 +45,10 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Register { name } => execute_register(deps, env, info, name),
+        ExecuteMsg::RenewRegistration{ name } => renew_registration(deps, env, info, name),
         ExecuteMsg::UpdateResolver {name,new_resolver} =>update_resolver(info,deps, env, name,new_resolver),
         ExecuteMsg::RegisterSubDomain {domain,subdomain, new_resolver,mint,expiration}=> set_subdomain( info,deps,env, domain,subdomain, new_resolver,mint,expiration),
+        ExecuteMsg::UpdateConfig {update_config}=>_update_config(deps, env, info,update_config),
     }
 }
 
@@ -61,18 +64,50 @@ pub fn execute_register(
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block){
             return Err(ContractError::NameTaken { name });
-        }
-        
+        }        
     }
     let c:Config =config_read(deps.storage).load()?;
-    let record = NameRecord { owner: info.sender.clone(),expiration:c.base_expiration.add(cw_utils::Duration::Height(_env.block.time.seconds())).unwrap() };
+  
+    let record = NameRecord { owner: info.sender.clone(),expiration:c.base_expiration +_env.block.time.seconds() };
     mint_handler(&name,&info.sender,&c.cw721)?;
+    must_pay(&info,&c.base_cost.to_string());
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
-
+pub fn renew_registration(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    name: String,
+) -> Result<Response, ContractError> {
+    validate_name(&name)?;
+    let key = &name.as_bytes();
+    let curr=(resolver(deps.storage).may_load(key)?).unwrap();
+    let c:Config =config_read(deps.storage).load()?;
+    if curr.is_expired(&_env.block){
+        return Err(ContractError::NameOwnershipExpired { name });
+    }   
+    let owner_response=query_name_owner(&name,&c.cw721,&deps).unwrap();
+    if owner_response.owner!=info.sender {
+        return Err(ContractError::Unauthorized{});      
+    }  
+  
+    let record = NameRecord { owner: info.sender.clone(),expiration:c.base_expiration +curr.expiration };
+    
+    must_pay(&info,&c.base_cost.to_string());
+    resolver(deps.storage).save(key, &record)?;
+    Ok(Response::default())
+}
 // add reregister function so owners can extend their 
+pub fn _update_config( deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    config_update:Config
 
+    )-> Result<Response, ContractError> {
+        config(deps.storage).save(&config_update)?;
+        Ok(Response::default())
+    }
 fn update_resolver( info: MessageInfo,deps: DepsMut, env: Env, name: String, new_resolver:Addr) -> Result<Response, ContractError>  {
     let c:Config =config_read(deps.storage).load()?;
     let owner_response=query_name_owner(&name,&c.cw721,&deps).unwrap();
@@ -81,7 +116,12 @@ fn update_resolver( info: MessageInfo,deps: DepsMut, env: Env, name: String, new
     }
     
     let key = name.as_bytes();
-    let record = NameRecord { owner: new_resolver ,expiration:c.base_expiration.add(cw_utils::Duration::Height(env.block.time.seconds())).unwrap()};
+    let curr=(resolver(deps.storage).may_load(key)?).unwrap();
+    if curr.is_expired(&env.block){
+        return Err(ContractError::NameOwnershipExpired { name });
+    }   
+    let key = name.as_bytes();
+    let record = NameRecord { owner: new_resolver ,expiration:curr.expiration};
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
@@ -100,7 +140,8 @@ fn set_subdomain( info: MessageInfo,deps: DepsMut, env: Env, domain: String,subd
     if mint{
         mint_handler(&domain_route,&new_resolver,&c.cw721)?;
     }
-    let record = NameRecord { owner: new_resolver,expiration:c.base_expiration.add(cw_utils::Duration::Height(env.block.time.seconds())).unwrap() };
+    let curr=resolver(deps.storage).may_load(key)?;
+    let record = NameRecord { owner: new_resolver,expiration:curr.unwrap().expiration };
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
