@@ -1,22 +1,22 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use cw_utils::Expiration;
-use cosmwasm_std::{Addr, Storage,BlockInfo};
+use cosmwasm_std::{Addr, BlockInfo, Storage};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
+use cw_utils::Expiration;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 pub static NAME_RESOLVER_KEY: &[u8] = b"nameresolver";
 pub static CONFIG_KEY: &[u8] = b"config";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub admin: String,
-    pub wallet:Addr,
-    pub cw721:Addr,
-    pub base_cost:u64,
-    pub base_expiration:u64
+    pub admin: Addr,
+    pub wallet: Addr,
+    pub cw721: Addr,
+    pub base_cost: u64,
+    pub base_expiration: u64,
 }
 pub fn config(storage: &mut dyn Storage) -> Singleton<Config> {
     singleton(storage, CONFIG_KEY)
@@ -32,7 +32,7 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<Config> {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NameRecord {
     pub owner: Addr,
-    pub expiration:u64
+    pub expiration: u64,
 }
 impl NameRecord {
     pub fn is_expired(&self, block: &BlockInfo) -> bool {
