@@ -1,5 +1,5 @@
 use crate::state::Config;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr,Uint128};
 use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ pub struct InstantiateMsg {
     pub admin: Addr,
     pub wallet: Addr,
     pub cw721: Addr,
-    pub base_cost: u64,
+    pub base_cost: Uint128,
     pub base_expiration: u64,
 }
 

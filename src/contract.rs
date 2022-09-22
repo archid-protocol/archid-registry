@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,
+    entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
+    QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg
 };
 use cw721::OwnerOfResponse;
 use cw721_base::{
@@ -13,7 +13,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
 };
-use crate::state::{config, config_read, resolver, resolver_read, Config, NameRecord};
+use crate::state::{config, config_read, resolver,mint_status,mint_status_read, resolver_read, Config, NameRecord};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
@@ -81,10 +81,13 @@ pub fn execute_register(
     let key = &name.as_bytes();
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
-    //must_pay(&info, &c.base_cost.to_string())?;
+    let res=must_pay(&info, &String::from("ARCH"))?;
+    if res !=c.base_cost {
+        return Err(ContractError::InvalidPayment{amount:res})
+    }
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block) {
-            return Err(ContractError::NameTaken { name });
+            return Err(ContractError::NameTaken { name })
         }
     }
 
@@ -97,6 +100,7 @@ pub fn execute_register(
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::new().add_message(resp))
 }
+//limit on how many expiration period
 pub fn renew_registration(
     deps: DepsMut,
     _env: Env,
@@ -120,7 +124,10 @@ pub fn renew_registration(
         expiration: c.base_expiration + curr.expiration,
     };
 
-    must_pay(&info, &c.base_cost.to_string())?;
+    let res=must_pay(&info, &String::from("ARCH"))?;
+    if res !=c.base_cost {
+        return Err(ContractError::InvalidPayment{amount:res})
+    }
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
@@ -165,6 +172,14 @@ fn update_resolver(
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::default())
 }
+/**
+subdomain rules
+only minted by domain owner 
+expiration<= top level domain expiration
+
+when minted only nft owner can set subdomain resolver until expiration
+nft cannot be reminted unless burned by owner before expiration
+**/
 fn set_subdomain(
     info: MessageInfo,
     deps: DepsMut,
@@ -178,25 +193,35 @@ fn set_subdomain(
     validate_name(&domain)?;
     validate_name(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
-
+    
+    let domain_route = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let has_minted:bool=mint_status(deps.storage).may_load(key)?.is_some();
+    let curr = resolver(deps.storage).may_load(key)?;
+    if has_minted  {
+        if !curr.unwrap().is_expired(&env.block){
+            return Err(ContractError::NameTaken { name:domain_route })
+        }
+    }
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
-    }
-    let domain_route = format!("{}.{}", subdomain, domain);
-    let key = domain_route.as_bytes();
-    if mint {
-        mint_handler(&domain_route, &new_resolver, &c.cw721)?;
-    }
-    
-    let curr = resolver(deps.storage).may_load(key)?;
+    }  
+   
     let record = NameRecord {
-        owner: new_resolver,
+        owner: new_resolver.clone(),
         expiration: expiration,
     };
     resolver(deps.storage).save(key, &record)?;
+    if mint==true {
+        let resp= mint_handler(&domain_route, &new_resolver, &c.cw721)?;
+        if !has_minted {mint_status(deps.storage).save(key,&true);}
+        Ok(Response::new().add_message(resp))
+    }else{
+        Ok(Response::default())
+    }
     
-    Ok(Response::default())
+  
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -250,26 +275,24 @@ fn mint_handler(name: &String, creator: &Addr, cw721: &Addr) -> StdResult<Cosmos
     .into();
     Ok(resp)
 }
-/*fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
-    if amount.is_empty() {
-        Ok(vec![])
-    } else {
-        let msg = BankMsg::Send {
+fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+   
+    let msg = BankMsg::Send {
             to_address: to.into(),
-            amount: Coin::new(amount,'ARCH'),
-        };
-        Ok(vec![SubMsg::new(msg)])
-    }
+            amount: (&[Coin { denom: String::from("ARCH"), amount:amount}]).to_vec() ,
+    };
+    Ok(msg.into())
+    
 }
-fn withdrawFees(info: MessageInfo, deps: DepsMut, env: Env, amount: u64) -> StdResult<CosmosMsg> {
+fn withdrawFees(info: MessageInfo, deps: DepsMut, env: Env, amount: Uint128) ->  Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
     if c.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-
-    send_tokens(c.wallet, msg.amount);
+    send_tokens(&c.wallet, amount);
+    Ok(Response::default())
 }
-*/
+
 fn burn_handler(name: String, cw721: Addr) -> StdResult<CosmosMsg> {
     let burn_msg: Cw721ExecuteMsg<Empty, Extension> = Cw721ExecuteMsg::Burn { token_id: name };
     let resp = CosmosMsg::Wasm(WasmMsg::Execute {
