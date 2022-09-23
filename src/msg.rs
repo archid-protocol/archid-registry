@@ -19,6 +19,9 @@ pub enum ExecuteMsg {
     Register {
         name: String,
     },
+    Withdraw {
+        amount: Uint128,
+    },
     RenewRegistration {
         name: String,
     },

@@ -68,6 +68,9 @@ pub fn execute(
         ExecuteMsg::UpdateConfig { update_config } => {
             _update_config(deps, env, info, update_config)
         }
+        ExecuteMsg::Withdraw{amount}=>{
+            withdrawFees(info,deps, env, amount)
+        }
     }
 }
 
