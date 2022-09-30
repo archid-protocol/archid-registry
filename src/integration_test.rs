@@ -110,8 +110,10 @@ fn mint_native(app: &mut App, beneficiary: String, denom: String, amount: Uint12
     ))
     .unwrap();
 }
+
+//test setup domain minting and subdomain minting
 #[test]
-fn test_domains() {
+fn basic_domain_test() {
     let mut app = mock_app();
     let current_time = get_block_time(&mut app);
 
@@ -230,5 +232,9 @@ fn test_domains() {
     )
     .unwrap();
     println!("{}", total2.count);
+
+}
+#[test]
+fn subomain_test(){
 
 }

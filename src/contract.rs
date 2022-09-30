@@ -1,14 +1,16 @@
 use cosmwasm_std::{
     entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg
+    QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg,Timestamp
 };
 use cw721::OwnerOfResponse;
+use schemars::JsonSchema;
 use cw721_base::{
     msg::ExecuteMsg as Cw721ExecuteMsg, msg::QueryMsg as Cw721QueryMsg, Extension, MintMsg,
+    msg::UpdateMetadataMsg
 };
 use cw_utils::{must_pay, Duration, Expiration};
 use std::ops::Add;
-
+use serde::{Deserialize, Serialize};
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
@@ -18,6 +20,17 @@ use crate::state::{config, config_read, resolver,mint_status,mint_status_read, r
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Metadata {
+    pub description: Option<String>,  
+    pub image: Option<String>,        
+    pub expiry: Option<u64>,
+    pub domain: Option<String>,
+    pub subdomains: Vec<String>,
+    pub accounts: Vec<String>,
+    pub websites: Vec<String>,
+}
+pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -93,12 +106,12 @@ pub fn execute_register(
             return Err(ContractError::NameTaken { name })
         }
     }
-
+    //let _expiration= c.base_expiration + _env.block.time.seconds();
     let record = NameRecord {
         owner: info.sender.clone(),
         expiration: c.base_expiration + _env.block.time.seconds(),
     };
-    let resp = mint_handler(&name, &info.sender, &c.cw721)?;
+    let resp = mint_handler(&name, &info.sender, &c.cw721,c.base_expiration + _env.block.time.seconds())?;
 
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::new().add_message(resp))
@@ -200,24 +213,35 @@ fn set_subdomain(
     let domain_route = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
     let has_minted:bool=mint_status(deps.storage).may_load(key)?.is_some();
-    let curr = resolver(deps.storage).may_load(key)?;
-    if has_minted  {
-        if !curr.unwrap().is_expired(&env.block){
-            return Err(ContractError::NameTaken { name:domain_route })
-        }
-    }
+    let domain_config:NameRecord= (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap(); 
+   
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
+
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }  
+    if has_minted  {
+        //let subdomain_config = (resolver(deps.storage).may_load(key)?).unwrap();   
+        if !((resolver(deps.storage).may_load(key)?).unwrap().is_expired(&env.block)){
+            return Err(ContractError::NameTaken { name:domain_route })
+        }
+    }
+    if env.block.time >= Timestamp::from_seconds(expiration){
+        return Err(ContractError::InvalidInput{})
+    }
+    let _expiration =  match &expiration > &domain_config.expiration {
+        true  => &domain_config.expiration,
+        false => &expiration
+    };
+    
    
     let record = NameRecord {
         owner: new_resolver.clone(),
-        expiration: expiration,
+        expiration: *_expiration,
     };
     resolver(deps.storage).save(key, &record)?;
     if mint==true {
-        let resp= mint_handler(&domain_route, &new_resolver, &c.cw721)?;
+        let resp= mint_handler(&domain_route, &new_resolver, &c.cw721,*_expiration)?;
         if !has_minted {mint_status(deps.storage).save(key,&true);}
         Ok(Response::new().add_message(resp))
     }else{
@@ -261,18 +285,58 @@ fn invalid_char(c: char) -> bool {
     let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '-' || c == '_');
     !is_valid
 }
-fn mint_handler(name: &String, creator: &Addr, cw721: &Addr) -> StdResult<CosmosMsg> {
-    let mint_msg: cw721_base::ExecuteMsg<Extension, Extension> =
-        Cw721ExecuteMsg::Mint(MintMsg::<Extension> {
+/**pub name: Option<String>,         
+    pub description: Option<String>,  
+    pub image: Option<String>,        
+    pub expiry: Option<Expiration>,
+    pub domain: Option<String>,
+    pub subdomains: Vec<String>,
+    pub accounts: Vec<String>,
+    pub websites: Vec<String>,
+**/
+/**
+ let mint_msg = ExecuteMsg::Mint(MintMsg::<Extension> {
+        token_id: token_id1.clone(),
+        owner: MINTER.to_string(),
+        token_uri: None,
+        extension: metadata_extension.clone(),
+    });
+**/
+fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> StdResult<CosmosMsg> {
+   
+    let mint_extension=Some(Metadata {
+        description:Some(String::from("subdomain")),
+        image:None, 
+        expiry:Some(expiration),
+        domain: None,
+        subdomains:vec![],
+        accounts:vec![],
+        websites:vec![],        
+    });
+    let mint_msg: cw721_base::ExecuteMsg<NameExtension, NameExtension> =
+        Cw721ExecuteMsg::Mint(MintMsg::<NameExtension>{
             token_id: name.to_string(),
             owner: creator.to_string(),
-            token_uri: Some(String::from("test")),
+            token_uri: None,
             extension: None,
         });
 
     let resp: CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&mint_msg)?,
+        funds: vec![],
+    }
+    .into();
+    Ok(resp)
+}
+fn metaDataUpdate(name: &String,cw721: &Addr,data:Metadata) -> StdResult<CosmosMsg> {
+    let update=UpdateMetadataMsg::<NameExtension> {
+        token_id: name.to_string(),
+        extension:Some(data)
+    };
+    let resp: CosmosMsg = WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&update)?,
         funds: vec![],
     }
     .into();
