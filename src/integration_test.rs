@@ -15,9 +15,9 @@ use cw721::{
     Cw721Query, NftInfoResponse, NumTokensResponse, OperatorsResponse, OwnerOfResponse,
     TokensResponse,
 };
-use cw721_base::{
-    msg::ExecuteMsg as Cw721ExecuteMsg, msg::InstantiateMsg as Cw721InstantiateMsg,
-    msg::QueryMsg as Cw721QueryMsg, Cw721Contract, Extension, MintMsg,
+use archid::{
+    ExecuteMsg as Cw721ExecuteMsg,InstantiateMsg as Cw721InstantiateMsg,
+    QueryMsg as Cw721QueryMsg, Extension, MintMsg,
 };
 use cw_multi_test::{App, BankKeeper, Contract, ContractWrapper, Executor};
 
@@ -42,9 +42,9 @@ fn increment_block_time(router: &mut App, new_time: u64, height_incr: u64) {
 }
 pub fn contract_cw721() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        cw721_base::entry::execute,
-        cw721_base::entry::instantiate,
-        cw721_base::entry::query,
+        archid::entry::execute,
+        archid::entry::instantiate,
+        archid::entry::query,
     );
     Box::new(contract)
 }

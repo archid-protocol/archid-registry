@@ -50,8 +50,9 @@ cw721 = "0.11"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
-cw-utils = "0.14.0"
-cw721-base= {path = "/home/jjj/ARCHWAY/cw721-updatable"}
+cw-utils = "0.13.4"
+
+archid = {path = "../archid-token/"}
 [dev-dependencies]
 cosmwasm-schema = "1.0.0-beta"
 cw-multi-test = "0.13.2"

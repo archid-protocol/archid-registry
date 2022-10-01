@@ -3,7 +3,9 @@ use cosmwasm_std::{Addr,Uint128};
 use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
+use archid::{    
+    Account,Website
+};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: Addr,
@@ -12,7 +14,13 @@ pub struct InstantiateMsg {
     pub base_cost: Uint128,
     pub base_expiration: u64,
 }
-
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MetaDataUpdateMsg {           
+    pub description: Option<String>, 
+    pub image: Option<String>,     
+    pub accounts: Option<Vec<Account>>,
+    pub websites: Option<Vec<Website>>,
+}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
@@ -40,6 +48,10 @@ pub enum ExecuteMsg {
     UpdateConfig {
         update_config: Config,
     },
+    UpdataUserDomainData{
+        name:String,
+        metadata_update:MetaDataUpdateMsg,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

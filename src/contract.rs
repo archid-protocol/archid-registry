@@ -2,34 +2,25 @@ use cosmwasm_std::{
     entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg,Timestamp
 };
-use cw721::OwnerOfResponse;
+use cw721::{OwnerOfResponse,NftInfoResponse};
 use schemars::JsonSchema;
-use cw721_base::{
-    msg::ExecuteMsg as Cw721ExecuteMsg, msg::QueryMsg as Cw721QueryMsg, Extension, MintMsg,
-    msg::UpdateMetadataMsg
+use archid::{
+    ExecuteMsg as Cw721ExecuteMsg, QueryMsg as Cw721QueryMsg, Extension, MintMsg,
+    Metadata,UpdateMetadataMsg,Account
 };
 use cw_utils::{must_pay, Duration, Expiration};
 use std::ops::Add;
 use serde::{Deserialize, Serialize};
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
+    ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,MetaDataUpdateMsg
 };
 use crate::state::{config, config_read, resolver,mint_status,mint_status_read, resolver_read, Config, NameRecord};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Metadata {
-    pub description: Option<String>,  
-    pub image: Option<String>,        
-    pub expiry: Option<u64>,
-    pub domain: Option<String>,
-    pub subdomains: Vec<String>,
-    pub accounts: Vec<String>,
-    pub websites: Vec<String>,
-}
+
 pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -78,6 +69,9 @@ pub fn execute(
             mint,
             expiration,
         ),
+        ExecuteMsg::UpdataUserDomainData{name,metadata_update}=>{
+            user_metadata_update_handler(info,deps,name,metadata_update)
+        }
         ExecuteMsg::UpdateConfig { update_config } => {
             _update_config(deps, env, info, update_config)
         }
@@ -285,35 +279,20 @@ fn invalid_char(c: char) -> bool {
     let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '-' || c == '_');
     !is_valid
 }
-/**pub name: Option<String>,         
-    pub description: Option<String>,  
-    pub image: Option<String>,        
-    pub expiry: Option<Expiration>,
-    pub domain: Option<String>,
-    pub subdomains: Vec<String>,
-    pub accounts: Vec<String>,
-    pub websites: Vec<String>,
-**/
-/**
- let mint_msg = ExecuteMsg::Mint(MintMsg::<Extension> {
-        token_id: token_id1.clone(),
-        owner: MINTER.to_string(),
-        token_uri: None,
-        extension: metadata_extension.clone(),
-    });
-**/
+
 fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> StdResult<CosmosMsg> {
    
     let mint_extension=Some(Metadata {
         description:Some(String::from("subdomain")),
+        name:Some(name.clone()),
         image:None, 
-        expiry:Some(expiration),
+        expiry:Some(Expiration::AtHeight(expiration)),
         domain: None,
-        subdomains:vec![],
-        accounts:vec![],
-        websites:vec![],        
+        subdomains:Some(vec![]),
+        accounts:Some(vec![]),
+        websites:Some(vec![]),        
     });
-    let mint_msg: cw721_base::ExecuteMsg<NameExtension, NameExtension> =
+    let mint_msg: archid::ExecuteMsg =
         Cw721ExecuteMsg::Mint(MintMsg::<NameExtension>{
             token_id: name.to_string(),
             owner: creator.to_string(),
@@ -329,18 +308,28 @@ fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> S
     .into();
     Ok(resp)
 }
-fn metaDataUpdate(name: &String,cw721: &Addr,data:Metadata) -> StdResult<CosmosMsg> {
-    let update=UpdateMetadataMsg::<NameExtension> {
-        token_id: name.to_string(),
-        extension:Some(data)
+
+fn user_metadata_update_handler(info: MessageInfo,deps: DepsMut,name: String,update:MetaDataUpdateMsg)-> Result<Response,ContractError> {
+    let c: Config = config_read(deps.storage).load()?;
+    let cw721 =c.cw721;
+    let owner_response = query_name_owner(&name, &cw721, &deps).unwrap();
+
+    if owner_response.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }  
+    let current_metadata:Metadata=query_current_metadata(&name,&cw721,&deps).unwrap();
+    let new_metadata= Metadata {
+        description:update.clone().description,
+        name:Some(name.clone()),
+        image:update.clone().description, 
+        expiry:current_metadata.expiry,
+        domain: current_metadata.domain,
+        subdomains:current_metadata.subdomains,
+        accounts:update.clone().accounts,
+        websites:update.clone().websites        
     };
-    let resp: CosmosMsg = WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&update)?,
-        funds: vec![],
-    }
-    .into();
-    Ok(resp)
+    let resp=send_data_update(&name,&cw721,new_metadata);
+    Ok(Response::new().add_message(resp.unwrap()))
 }
 fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
    
@@ -361,7 +350,7 @@ fn withdrawFees(info: MessageInfo, deps: DepsMut, env: Env, amount: Uint128) -> 
 }
 
 fn burn_handler(name: String, cw721: Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg<Empty, Extension> = Cw721ExecuteMsg::Burn { token_id: name };
+    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::Burn { token_id: name };
     let resp = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&burn_msg)?,
@@ -374,7 +363,7 @@ fn query_name_owner(
     cw721: &Addr,
     deps: &DepsMut,
 ) -> Result<OwnerOfResponse, StdError> {
-    let query_msg: cw721_base::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
         token_id: id.clone(),
         include_expired: None,
     };
@@ -384,6 +373,40 @@ fn query_name_owner(
     });
     let res: OwnerOfResponse = deps.querier.query(&req)?;
     Ok(res)
+}
+/**
+ * NftInfoResponse::<Extension> {
+    token_uri: None,
+    extension: metadata_extension.clone(),
+}
+ */
+fn query_current_metadata(
+    id: &String,
+    cw721: &Addr,
+    deps: &DepsMut,
+) -> Result<Metadata, StdError> {
+    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::NftInfo{
+        token_id: id.clone()        
+    };
+    let req = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&query_msg).unwrap(),
+    });
+    let res: NftInfoResponse<Metadata> = deps.querier.query(&req)?;
+    Ok(res.extension)
+}
+fn send_data_update(name: &String,cw721: &Addr,data:Metadata) -> StdResult<CosmosMsg> {
+    let update=UpdateMetadataMsg {
+        token_id: name.to_string(),
+        extension:Some(data)
+    };
+    let resp: CosmosMsg = WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&update)?,
+        funds: vec![],
+    }
+    .into();
+    Ok(resp)
 }
 /// validate_name returns an error if the name is invalid
 /// (we require 3-64 lowercase ascii letters, numbers, or . - _)
