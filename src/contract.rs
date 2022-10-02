@@ -92,12 +92,16 @@ pub fn execute_register(
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
     let res=must_pay(&info, &String::from("ARCH"))?;
+    let mut response = Response::new();
     if res !=c.base_cost {
         return Err(ContractError::InvalidPayment{amount:res})
     }
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block) {
             return Err(ContractError::NameTaken { name })
+        }else{
+            let burn_msg=burn_handler(&name, &c.cw721)?;
+            response.add_message(burn_msg);
         }
     }
     //let _expiration= c.base_expiration + _env.block.time.seconds();
@@ -105,10 +109,10 @@ pub fn execute_register(
         owner: info.sender.clone(),
         expiration: c.base_expiration + _env.block.time.seconds(),
     };
-    let resp = mint_handler(&name, &info.sender, &c.cw721,c.base_expiration + _env.block.time.seconds())?;
-
+    let mint_resp = mint_handler(&name, &info.sender, &c.cw721,c.base_expiration + _env.block.time.seconds())?;
+    response.add_message(mint_resp);
     resolver(deps.storage).save(key, &record)?;
-    Ok(Response::new().add_message(resp))
+    Ok(response)
 }
 //limit on how many expiration period
 pub fn renew_registration(
@@ -308,7 +312,15 @@ fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> S
     .into();
     Ok(resp)
 }
-
+fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
+    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly { token_id: name };
+    let resp:CosmosMsg = WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&burn_msg)?,
+        funds: vec![],
+    }.into();
+    Ok(resp)
+}
 fn user_metadata_update_handler(info: MessageInfo,deps: DepsMut,name: String,update:MetaDataUpdateMsg)-> Result<Response,ContractError> {
     let c: Config = config_read(deps.storage).load()?;
     let cw721 =c.cw721;
@@ -349,15 +361,7 @@ fn withdrawFees(info: MessageInfo, deps: DepsMut, env: Env, amount: Uint128) -> 
     Ok(Response::default())
 }
 
-fn burn_handler(name: String, cw721: Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::Burn { token_id: name };
-    let resp = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&burn_msg)?,
-        funds: vec![],
-    });
-    Ok(resp)
-}
+
 fn query_name_owner(
     id: &String,
     cw721: &Addr,
