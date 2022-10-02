@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError,Uint128};
+use cosmwasm_std::{StdError, Uint128};
 use cw_utils::PaymentError;
 use thiserror::Error;
 #[derive(Error, Debug)]
@@ -11,10 +11,10 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
     #[error("InvalidInput")]
-    InvalidInput{},
-    
+    InvalidInput {},
+
     #[error("InvalidPayment")]
-    InvalidPayment {amount:Uint128},
+    InvalidPayment { amount: Uint128 },
     #[error("Name does not exist (name {name})")]
     NameNotExists { name: String },
 

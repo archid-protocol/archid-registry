@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr,Uint128, BlockInfo, Storage};
+use cosmwasm_std::{Addr, BlockInfo, Storage, Timestamp, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub static NAME_RESOLVER_KEY: &[u8] = b"nameresolver";
-pub static SUBDOMAIN_MINTED:&[u8]=b"subdomain_minted";
+pub static SUBDOMAIN_MINTED: &[u8] = b"subdomain_minted";
 pub static CONFIG_KEY: &[u8] = b"config";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -27,7 +27,6 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-
 /**
     add expiration
     and top level domain?
@@ -39,7 +38,7 @@ pub struct NameRecord {
 }
 impl NameRecord {
     pub fn is_expired(&self, block: &BlockInfo) -> bool {
-        Expiration::AtHeight(self.expiration).is_expired(block)
+        Expiration::AtTime(Timestamp::from_seconds(self.expiration)).is_expired(block)
     }
 }
 pub fn resolver(storage: &mut dyn Storage) -> Bucket<NameRecord> {

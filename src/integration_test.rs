@@ -6,6 +6,10 @@ use cosmwasm_std::{
     Timestamp, Uint128, WasmMsg, WasmQuery,
 };
 
+use archid::{
+    ExecuteMsg as Cw721ExecuteMsg, Extension, InstantiateMsg as Cw721InstantiateMsg, Metadata,
+    MintMsg, QueryMsg as Cw721QueryMsg,
+};
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MockStorage,
     MOCK_CONTRACT_ADDR,
@@ -14,10 +18,6 @@ use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, CustomMsg,
     Cw721Query, NftInfoResponse, NumTokensResponse, OperatorsResponse, OwnerOfResponse,
     TokensResponse,
-};
-use archid::{
-    ExecuteMsg as Cw721ExecuteMsg,InstantiateMsg as Cw721InstantiateMsg,
-    QueryMsg as Cw721QueryMsg, Extension, MintMsg,
 };
 use cw_multi_test::{App, BankKeeper, Contract, ContractWrapper, Executor};
 
@@ -28,7 +28,6 @@ use crate::state::{Config, NameRecord};
 use serde::{de::DeserializeOwned, Serialize};
 
 fn mock_app() -> App {
-    
     App::default()
 }
 fn get_block_time(router: &mut App) -> u64 {
@@ -91,6 +90,7 @@ fn create_cw721(router: &mut App, minter: &Addr) -> Addr {
         .unwrap();
     contract
 }
+
 pub fn query<M, T>(router: &mut App, target_contract: Addr, msg: M) -> Result<T, StdError>
 where
     M: Serialize + DeserializeOwned,
@@ -105,7 +105,10 @@ fn mint_native(app: &mut App, beneficiary: String, denom: String, amount: Uint12
     app.sudo(cw_multi_test::SudoMsg::Bank(
         cw_multi_test::BankSudo::Mint {
             to_address: beneficiary,
-            amount: vec![Coin { denom: denom, amount: amount }],
+            amount: vec![Coin {
+                denom: denom,
+                amount: amount,
+            }],
         },
     ))
     .unwrap();
@@ -125,7 +128,12 @@ fn basic_domain_test() {
     let name_owner = Addr::unchecked("mintnames");
     let mock = Addr::unchecked("testtesttest");
     let domain_owner = Addr::unchecked("domain_owner");
-    mint_native(&mut app, name_owner.to_string(), String::from("ARCH"),Uint128::from(10000u128));
+    mint_native(
+        &mut app,
+        name_owner.to_string(),
+        String::from("ARCH"),
+        Uint128::from(10000u128),
+    );
     let name_service = create_name_service(
         &mut app,
         owner.clone(),
@@ -156,10 +164,30 @@ fn basic_domain_test() {
     let register_msg = ExecuteMsg::Register {
         name: String::from("simpletest"),
     };
-    assert!(app.execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[]).is_err());
-    let res = app.execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[Coin { denom: String::from("ARCH"), amount:Uint128::from(5000u128)} ]);
-    assert!(app.execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[Coin { denom: String::from("ARCH"), amount:Uint128::from(5000u128)} ]).is_err());
-   
+    assert!(app
+        .execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[])
+        .is_err());
+    let res = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &register_msg,
+        &[Coin {
+            denom: String::from("ARCH"),
+            amount: Uint128::from(5000u128),
+        }],
+    );
+    assert!(app
+        .execute_contract(
+            name_owner.clone(),
+            name_service.clone(),
+            &register_msg,
+            &[Coin {
+                denom: String::from("ARCH"),
+                amount: Uint128::from(5000u128)
+            }]
+        )
+        .is_err());
+
     println!("{:?}", res);
     let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
         token_id: String::from("simpletest"),
@@ -186,10 +214,10 @@ fn basic_domain_test() {
     )
     .unwrap();
     let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
-   
+
     println!("{:?}", resolve.address.unwrap());
     println!("{:?}", nft_owner);
-    
+
     let expiration: RecordExpirationResponse = query(
         &mut app,
         name_service.clone(),
@@ -204,9 +232,14 @@ fn basic_domain_test() {
         subdomain: String::from("subdomain"),
         new_resolver: mock.clone(),
         mint: false,
-        expiration: expiration.expiration
+        expiration: expiration.expiration,
     };
-    let res2 = app.execute_contract(name_owner.clone(), name_service.clone(), &subdomain_msg, &[]);
+    let res2 = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &subdomain_msg,
+        &[],
+    );
     println!("{:?}", res2);
     let subresolve: ResolveRecordResponse = query(
         &mut app,
@@ -214,17 +247,23 @@ fn basic_domain_test() {
         QueryMsg::ResolveRecord {
             name: String::from("subdomain.simpletest"),
         },
-    ).unwrap();
+    )
+    .unwrap();
     println!("{:?}", subresolve);
     let subdomain_msg2 = ExecuteMsg::RegisterSubDomain {
         domain: String::from("simpletest"),
         subdomain: String::from("nft_subdomain"),
         new_resolver: mock.clone(),
         mint: true,
-        expiration: expiration.expiration
+        expiration: expiration.expiration,
     };
-    let res3 = app.execute_contract(name_owner.clone(), name_service.clone(), &subdomain_msg2, &[]);
-    println!("{:?}",res3);
+    let res3 = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &subdomain_msg2,
+        &[],
+    );
+    println!("{:?}", res3);
     let total2: NumTokensResponse = query(
         &mut app,
         nft.clone(),
@@ -232,9 +271,241 @@ fn basic_domain_test() {
     )
     .unwrap();
     println!("{}", total2.count);
-
 }
-#[test]
-fn subomain_test(){
 
+#[test]
+fn test_expired_domains() {
+    let mut app = mock_app();
+    let mut current_time = get_block_time(&mut app);
+    let owner = Addr::unchecked("owner");
+    let wallet = Addr::unchecked("wallet");
+    let name_owner = Addr::unchecked("mintnames");
+    let name_owner2 = Addr::unchecked("mintothernames");
+    let mock = Addr::unchecked("testtesttest");
+    let domain_owner = Addr::unchecked("domain_owner");
+    mint_native(
+        &mut app,
+        name_owner.to_string(),
+        String::from("ARCH"),
+        Uint128::from(10000u128),
+    );
+    mint_native(
+        &mut app,
+        name_owner2.to_string(),
+        String::from("ARCH"),
+        Uint128::from(10000u128),
+    );
+    let name_service = create_name_service(
+        &mut app,
+        owner.clone(),
+        wallet.clone(),
+        mock.clone(),
+        Uint128::from(5000u64),
+        10000000,
+    );
+    let nft = create_cw721(&mut app, &name_service);
+    let update_config = Config {
+        admin: owner.clone(),
+        wallet: wallet.clone(),
+        cw721: nft.clone(),
+        base_cost: Uint128::from(5000u64),
+        base_expiration: 86400,
+    };
+    let update_msg = ExecuteMsg::UpdateConfig {
+        update_config: update_config,
+    };
+    app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
+
+    let info: Config = query(&mut app, name_service.clone(), QueryMsg::Config {}).unwrap();
+    let register_msg = ExecuteMsg::Register {
+        name: String::from("simpletest"),
+    };
+    app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &register_msg,
+        &[Coin {
+            denom: String::from("ARCH"),
+            amount: Uint128::from(5000u128),
+        }],
+    );
+    increment_block_time(&mut app, current_time + 86401, 777);
+    let resolve: ResolveRecordResponse = query(
+        &mut app,
+        name_service.clone(),
+        QueryMsg::ResolveRecord {
+            name: String::from("simpletest"),
+        },
+    )
+    .unwrap();
+    assert!(resolve.address == None);
+    current_time = get_block_time(&mut app);
+    let subdomain_msg = ExecuteMsg::RegisterSubDomain {
+        domain: String::from("simpletest"),
+        subdomain: String::from("subdomain"),
+        new_resolver: mock.clone(),
+        mint: false,
+        expiration: current_time + 1000,
+    };
+    assert!(app
+        .execute_contract(
+            name_owner.clone(),
+            name_service.clone(),
+            &subdomain_msg,
+            &[]
+        )
+        .is_err());
+    app.execute_contract(
+        name_owner2.clone(),
+        name_service.clone(),
+        &register_msg,
+        &[Coin {
+            denom: String::from("ARCH"),
+            amount: Uint128::from(5000u128),
+        }],
+    );
+    let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+        token_id: String::from("simpletest"),
+        include_expired: None,
+    };
+
+    let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
+    assert!(nft_owner.owner == name_owner2);
+    let info1: NftInfoResponse<Metadata> = query(
+        &mut app,
+        nft.clone(),
+        Cw721QueryMsg::NftInfo {
+            token_id: String::from("simpletest"),
+        },
+    )
+    .unwrap();
+    /**assert_eq!(
+            info1,
+            NftInfoResponse {
+                token_uri: None,
+                extension: metadata_extension.clone(),
+            }
+    );**/
+    println!("{:?}", info1);
+}
+
+#[test]
+fn test_subdomain_rules() {
+    let mut app = mock_app();
+
+    let owner = Addr::unchecked("owner");
+    let wallet = Addr::unchecked("wallet");
+    let name_owner = Addr::unchecked("mintnames");
+    let name_owner2 = Addr::unchecked("mintothernames");
+    let mock = Addr::unchecked("testtesttest");
+    let domain_owner = Addr::unchecked("domain_owner");
+    mint_native(
+        &mut app,
+        name_owner.to_string(),
+        String::from("ARCH"),
+        Uint128::from(10000u128),
+    );
+    mint_native(
+        &mut app,
+        name_owner2.to_string(),
+        String::from("ARCH"),
+        Uint128::from(10000u128),
+    );
+    let name_service = create_name_service(
+        &mut app,
+        owner.clone(),
+        wallet.clone(),
+        mock.clone(),
+        Uint128::from(5000u64),
+        10000000,
+    );
+    let nft = create_cw721(&mut app, &name_service);
+    let update_config = Config {
+        admin: owner.clone(),
+        wallet: wallet.clone(),
+        cw721: nft.clone(),
+        base_cost: Uint128::from(5000u64),
+        base_expiration: 86400,
+    };
+    let update_msg = ExecuteMsg::UpdateConfig {
+        update_config: update_config,
+    };
+    app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
+
+    let info: Config = query(&mut app, name_service.clone(), QueryMsg::Config {}).unwrap();
+    let register_msg = ExecuteMsg::Register {
+        name: String::from("simpletest"),
+    };
+    app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &register_msg,
+        &[Coin {
+            denom: String::from("ARCH"),
+            amount: Uint128::from(5000u128),
+        }],
+    );
+    let mut current_time = get_block_time(&mut app);
+    let subdomain_msg = ExecuteMsg::RegisterSubDomain {
+        domain: String::from("simpletest"),
+        subdomain: String::from("nft_subdomain"),
+        new_resolver: name_owner2.clone(),
+        mint: true,
+        expiration: current_time + 43200,
+    };
+    let subdomain_msg2 = ExecuteMsg::RegisterSubDomain {
+        domain: String::from("simpletest"),
+        subdomain: String::from("nft_subdomain"),
+        new_resolver: name_owner.clone(),
+        mint: true,
+        expiration: current_time + 43200,
+    };
+    let res3 = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &subdomain_msg,
+        &[],
+    );
+    //app.execute_contract(name_owner.clone(), name_service.clone(), &subdomain_msg, &[]);
+    assert!(app
+        .execute_contract(
+            name_owner.clone(),
+            name_service.clone(),
+            &subdomain_msg,
+            &[]
+        )
+        .is_err());
+    let update_resolver_msg = ExecuteMsg::UpdateResolver {
+        name: String::from("nft_subdomain.simpletest"),
+        new_resolver: domain_owner,
+    };
+    assert!(app
+        .execute_contract(
+            name_owner.clone(),
+            name_service.clone(),
+            &update_resolver_msg,
+            &[]
+        )
+        .is_err());
+    app.execute_contract(
+        name_owner2.clone(),
+        name_service.clone(),
+        &update_resolver_msg,
+        &[],
+    );
+    current_time = get_block_time(&mut app);
+    increment_block_time(&mut app, current_time + 43205, 77);
+    let res4 = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &subdomain_msg,
+        &[],
+    );
+    let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+        token_id: String::from("simpletest"),
+        include_expired: None,
+    };
+
+    let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
+    assert!(nft_owner.owner == name_owner);
 }

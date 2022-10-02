@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
+    entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg,SubMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg,Timestamp
 };
 use cw721::{OwnerOfResponse,NftInfoResponse};
@@ -91,8 +91,8 @@ pub fn execute_register(
     let key = &name.as_bytes();
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
-    let res=must_pay(&info, &String::from("ARCH"))?;
-    let mut response = Response::new();
+    let res=must_pay(&info, &String::from("ARCH"))?;   
+    let mut messages= Vec::new();
     if res !=c.base_cost {
         return Err(ContractError::InvalidPayment{amount:res})
     }
@@ -101,7 +101,8 @@ pub fn execute_register(
             return Err(ContractError::NameTaken { name })
         }else{
             let burn_msg=burn_handler(&name, &c.cw721)?;
-            response.add_message(burn_msg);
+            messages.push(burn_msg);
+            //&response.add_message(burn_msg);
         }
     }
     //let _expiration= c.base_expiration + _env.block.time.seconds();
@@ -110,11 +111,11 @@ pub fn execute_register(
         expiration: c.base_expiration + _env.block.time.seconds(),
     };
     let mint_resp = mint_handler(&name, &info.sender, &c.cw721,c.base_expiration + _env.block.time.seconds())?;
-    response.add_message(mint_resp);
+    messages.push(mint_resp);    
     resolver(deps.storage).save(key, &record)?;
-    Ok(response)
+    Ok(Response::new().add_messages(messages))
 }
-//limit on how many expiration period
+
 pub fn renew_registration(
     deps: DepsMut,
     _env: Env,
@@ -207,14 +208,16 @@ fn set_subdomain(
     validate_name(&domain)?;
     validate_name(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
-    
+    let mut messages= Vec::new();
     let domain_route = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
     let has_minted:bool=mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config:NameRecord= (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap(); 
    
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-
+    if domain_config.is_expired(&env.block) {
+        return Err(ContractError::NameOwnershipExpired { name:domain });
+    }
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }  
@@ -238,10 +241,17 @@ fn set_subdomain(
         expiration: *_expiration,
     };
     resolver(deps.storage).save(key, &record)?;
-    if mint==true {
+    if mint==true {          
+           
+        if !has_minted {
+            mint_status(deps.storage).save(key,&true);
+        }else{
+            let burn_msg=burn_handler(&domain_route, &c.cw721)?;
+            messages.push(burn_msg);
+        }
         let resp= mint_handler(&domain_route, &new_resolver, &c.cw721,*_expiration)?;
-        if !has_minted {mint_status(deps.storage).save(key,&true);}
-        Ok(Response::new().add_message(resp))
+        messages.push(resp);
+        Ok(Response::new().add_messages(messages))
     }else{
         Ok(Response::default())
     }
@@ -262,12 +272,12 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let key = name.as_bytes();
     let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
 
-    let address = match !curr.is_expired(&_env.block) {
-        true => Some(String::from(&curr.owner)),
-        false => None,
+    let address = match curr.is_expired(&_env.block) {
+        true => None,
+        false => Some(String::from(&curr.owner)),
     };
 
-    let resp = ResolveRecordResponse { address };
+    let resp = ResolveRecordResponse { address,expiration:curr.expiration };
     to_binary(&resp)
 }
 fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
@@ -313,7 +323,7 @@ fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> S
     Ok(resp)
 }
 fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly { token_id: name };
+    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly { token_id: name.to_string() };
     let resp:CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&burn_msg)?,

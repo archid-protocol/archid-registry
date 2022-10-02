@@ -1,11 +1,9 @@
 use crate::state::Config;
-use cosmwasm_std::{Addr,Uint128};
+use archid::{Account, Website};
+use cosmwasm_std::{Addr, Uint128};
 use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use archid::{    
-    Account,Website
-};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: Addr,
@@ -15,9 +13,9 @@ pub struct InstantiateMsg {
     pub base_expiration: u64,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MetaDataUpdateMsg {           
-    pub description: Option<String>, 
-    pub image: Option<String>,     
+pub struct MetaDataUpdateMsg {
+    pub description: Option<String>,
+    pub image: Option<String>,
     pub accounts: Option<Vec<Account>>,
     pub websites: Option<Vec<Website>>,
 }
@@ -48,10 +46,10 @@ pub enum ExecuteMsg {
     UpdateConfig {
         update_config: Config,
     },
-    UpdataUserDomainData{
-        name:String,
-        metadata_update:MetaDataUpdateMsg,
-    }
+    UpdataUserDomainData {
+        name: String,
+        metadata_update: MetaDataUpdateMsg,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -65,6 +63,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ResolveRecordResponse {
     pub address: Option<String>,
+    pub expiration: u64,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RecordExpirationResponse {
