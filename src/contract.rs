@@ -1,25 +1,25 @@
 use cosmwasm_std::{
-    entry_point, to_binary,Uint128, Addr, Binary, CosmosMsg,SubMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    QueryRequest, Response, StdError, StdResult, WasmMsg, WasmQuery,Coin,BankMsg,Timestamp
+    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, QueryRequest, Response, StdError, StdResult, Timestamp, Uint128, WasmMsg,
+    WasmQuery,
 };
-use cw721::{OwnerOfResponse,NftInfoResponse};
-use schemars::JsonSchema;
+use cw721::{NftInfoResponse, OwnerOfResponse};
+
 use archid::{
-    ExecuteMsg as Cw721ExecuteMsg, QueryMsg as Cw721QueryMsg, Extension, MintMsg,
-    Metadata,UpdateMetadataMsg,Account
+    ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
+    UpdateMetadataMsg,
 };
-use cw_utils::{must_pay, Duration, Expiration};
-use std::ops::Add;
-use serde::{Deserialize, Serialize};
+use cw_utils::{must_pay, Expiration};
+
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,MetaDataUpdateMsg
+    ExecuteMsg, InstantiateMsg, MetaDataUpdateMsg, QueryMsg, RecordExpirationResponse,
+    ResolveRecordResponse,
 };
-use crate::state::{config, config_read, resolver,mint_status,mint_status_read, resolver_read, Config, NameRecord};
+use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
-
 
 pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -69,15 +69,14 @@ pub fn execute(
             mint,
             expiration,
         ),
-        ExecuteMsg::UpdataUserDomainData{name,metadata_update}=>{
-            user_metadata_update_handler(info,deps,name,metadata_update)
-        }
+        ExecuteMsg::UpdataUserDomainData {
+            name,
+            metadata_update,
+        } => user_metadata_update_handler(info, deps, name, metadata_update),
         ExecuteMsg::UpdateConfig { update_config } => {
             _update_config(deps, env, info, update_config)
         }
-        ExecuteMsg::Withdraw{amount}=>{
-            withdrawFees(info,deps, env, amount)
-        }
+        ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
     }
 }
 
@@ -91,16 +90,16 @@ pub fn execute_register(
     let key = &name.as_bytes();
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
-    let res=must_pay(&info, &String::from("ARCH"))?;   
-    let mut messages= Vec::new();
-    if res !=c.base_cost {
-        return Err(ContractError::InvalidPayment{amount:res})
+    let res = must_pay(&info, &String::from("ARCH"))?;
+    let mut messages = Vec::new();
+    if res != c.base_cost {
+        return Err(ContractError::InvalidPayment { amount: res });
     }
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block) {
-            return Err(ContractError::NameTaken { name })
-        }else{
-            let burn_msg=burn_handler(&name, &c.cw721)?;
+            return Err(ContractError::NameTaken { name });
+        } else {
+            let burn_msg = burn_handler(&name, &c.cw721)?;
             messages.push(burn_msg);
             //&response.add_message(burn_msg);
         }
@@ -110,8 +109,13 @@ pub fn execute_register(
         owner: info.sender.clone(),
         expiration: c.base_expiration + _env.block.time.seconds(),
     };
-    let mint_resp = mint_handler(&name, &info.sender, &c.cw721,c.base_expiration + _env.block.time.seconds())?;
-    messages.push(mint_resp);    
+    let mint_resp = mint_handler(
+        &name,
+        &info.sender,
+        &c.cw721,
+        c.base_expiration + _env.block.time.seconds(),
+    )?;
+    messages.push(mint_resp);
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::new().add_messages(messages))
 }
@@ -139,12 +143,24 @@ pub fn renew_registration(
         expiration: c.base_expiration + curr.expiration,
     };
 
-    let res=must_pay(&info, &String::from("ARCH"))?;
-    if res !=c.base_cost {
-        return Err(ContractError::InvalidPayment{amount:res})
+    let res = must_pay(&info, &String::from("ARCH"))?;
+    if res != c.base_cost {
+        return Err(ContractError::InvalidPayment { amount: res });
     }
     resolver(deps.storage).save(key, &record)?;
-    Ok(Response::default())
+    let resp = update_metadata_expiry(deps, &c.cw721, name, c.base_expiration + curr.expiration);
+    Ok(Response::new().add_message(resp.unwrap()))
+}
+fn update_metadata_expiry(
+    deps: DepsMut,
+    cw721: &Addr,
+    name: String,
+    expiration: u64,
+) -> StdResult<CosmosMsg> {
+    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    current_metadata.expiry = Some(Expiration::AtTime(Timestamp::from_seconds(expiration)));
+    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    Ok(resp)
 }
 // add reregister function so owners can extend their
 pub fn _update_config(
@@ -189,7 +205,7 @@ fn update_resolver(
 }
 /**
 subdomain rules
-only minted by domain owner 
+only minted by domain owner
 expiration<= top level domain expiration
 
 when minted only nft owner can set subdomain resolver until expiration
@@ -208,55 +224,54 @@ fn set_subdomain(
     validate_name(&domain)?;
     validate_name(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
-    let mut messages= Vec::new();
+    let mut messages = Vec::new();
     let domain_route = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
-    let has_minted:bool=mint_status(deps.storage).may_load(key)?.is_some();
-    let domain_config:NameRecord= (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap(); 
-   
+    let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+    let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
+
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
     if domain_config.is_expired(&env.block) {
-        return Err(ContractError::NameOwnershipExpired { name:domain });
+        return Err(ContractError::NameOwnershipExpired { name: domain });
     }
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
-    }  
-    if has_minted  {
-        //let subdomain_config = (resolver(deps.storage).may_load(key)?).unwrap();   
-        if !((resolver(deps.storage).may_load(key)?).unwrap().is_expired(&env.block)){
-            return Err(ContractError::NameTaken { name:domain_route })
+    }
+    if has_minted {
+        //let subdomain_config = (resolver(deps.storage).may_load(key)?).unwrap();
+        if !((resolver(deps.storage).may_load(key)?)
+            .unwrap()
+            .is_expired(&env.block))
+        {
+            return Err(ContractError::NameTaken { name: domain_route });
         }
     }
-    if env.block.time >= Timestamp::from_seconds(expiration){
-        return Err(ContractError::InvalidInput{})
+    if env.block.time >= Timestamp::from_seconds(expiration) {
+        return Err(ContractError::InvalidInput {});
     }
-    let _expiration =  match &expiration > &domain_config.expiration {
-        true  => &domain_config.expiration,
-        false => &expiration
+    let _expiration = match &expiration > &domain_config.expiration {
+        true => &domain_config.expiration,
+        false => &expiration,
     };
-    
-   
+
     let record = NameRecord {
         owner: new_resolver.clone(),
         expiration: *_expiration,
     };
     resolver(deps.storage).save(key, &record)?;
-    if mint==true {          
-           
+    if mint == true {
         if !has_minted {
-            mint_status(deps.storage).save(key,&true);
-        }else{
-            let burn_msg=burn_handler(&domain_route, &c.cw721)?;
+            mint_status(deps.storage).save(key, &true)?;
+        } else {
+            let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
-        let resp= mint_handler(&domain_route, &new_resolver, &c.cw721,*_expiration)?;
+        let resp = mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
-    }else{
+    } else {
         Ok(Response::default())
     }
-    
-  
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -277,7 +292,10 @@ fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
         false => Some(String::from(&curr.owner)),
     };
 
-    let resp = ResolveRecordResponse { address,expiration:curr.expiration };
+    let resp = ResolveRecordResponse {
+        address,
+        expiration: curr.expiration,
+    };
     to_binary(&resp)
 }
 fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
@@ -294,25 +312,28 @@ fn invalid_char(c: char) -> bool {
     !is_valid
 }
 
-fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> StdResult<CosmosMsg> {
-   
-    let mint_extension=Some(Metadata {
-        description:Some(String::from("subdomain")),
-        name:Some(name.clone()),
-        image:None, 
-        expiry:Some(Expiration::AtHeight(expiration)),
+fn mint_handler(
+    name: &String,
+    creator: &Addr,
+    cw721: &Addr,
+    expiration: u64,
+) -> StdResult<CosmosMsg> {
+    let mint_extension = Some(Metadata {
+        description: Some(String::from("subdomain")),
+        name: Some(name.clone()),
+        image: None,
+        expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
         domain: None,
-        subdomains:Some(vec![]),
-        accounts:Some(vec![]),
-        websites:Some(vec![]),        
+        subdomains: Some(vec![]),
+        accounts: Some(vec![]),
+        websites: Some(vec![]),
     });
-    let mint_msg: archid::ExecuteMsg =
-        Cw721ExecuteMsg::Mint(MintMsg::<NameExtension>{
-            token_id: name.to_string(),
-            owner: creator.to_string(),
-            token_uri: None,
-            extension: None,
-        });
+    let mint_msg: archid::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg::<NameExtension> {
+        token_id: name.to_string(),
+        owner: creator.to_string(),
+        token_uri: None,
+        extension: mint_extension,
+    });
 
     let resp: CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
@@ -323,54 +344,67 @@ fn mint_handler(name: &String, creator: &Addr, cw721: &Addr,expiration:u64) -> S
     Ok(resp)
 }
 fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly { token_id: name.to_string() };
-    let resp:CosmosMsg = WasmMsg::Execute {
+    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly {
+        token_id: name.to_string(),
+    };
+    let resp: CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&burn_msg)?,
         funds: vec![],
-    }.into();
+    }
+    .into();
     Ok(resp)
 }
-fn user_metadata_update_handler(info: MessageInfo,deps: DepsMut,name: String,update:MetaDataUpdateMsg)-> Result<Response,ContractError> {
+fn user_metadata_update_handler(
+    info: MessageInfo,
+    deps: DepsMut,
+    name: String,
+    update: MetaDataUpdateMsg,
+) -> Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
-    let cw721 =c.cw721;
+    let cw721 = c.cw721;
     let owner_response = query_name_owner(&name, &cw721, &deps).unwrap();
 
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
-    }  
-    let current_metadata:Metadata=query_current_metadata(&name,&cw721,&deps).unwrap();
-    let new_metadata= Metadata {
-        description:update.clone().description,
-        name:Some(name.clone()),
-        image:update.clone().description, 
-        expiry:current_metadata.expiry,
+    }
+    let current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let new_metadata = Metadata {
+        description: update.clone().description,
+        name: Some(name.clone()),
+        image: update.clone().description,
+        expiry: current_metadata.expiry,
         domain: current_metadata.domain,
-        subdomains:current_metadata.subdomains,
-        accounts:update.clone().accounts,
-        websites:update.clone().websites        
+        subdomains: current_metadata.subdomains,
+        accounts: update.clone().accounts,
+        websites: update.clone().websites,
     };
-    let resp=send_data_update(&name,&cw721,new_metadata);
+    let resp = send_data_update(&name, &cw721, new_metadata);
     Ok(Response::new().add_message(resp.unwrap()))
 }
 fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
-   
     let msg = BankMsg::Send {
-            to_address: to.into(),
-            amount: (&[Coin { denom: String::from("ARCH"), amount:amount}]).to_vec() ,
+        to_address: to.into(),
+        amount: (&[Coin {
+            denom: String::from("ARCH"),
+            amount: amount,
+        }])
+            .to_vec(),
     };
     Ok(msg.into())
-    
 }
-fn withdrawFees(info: MessageInfo, deps: DepsMut, env: Env, amount: Uint128) ->  Result<Response, ContractError> {
+fn withdraw_fees(
+    info: MessageInfo,
+    deps: DepsMut,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
     if c.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-    send_tokens(&c.wallet, amount);
-    Ok(Response::default())
+    let resp = send_tokens(&c.wallet, amount)?;
+    Ok(Response::new().add_message(resp))
 }
-
 
 fn query_name_owner(
     id: &String,
@@ -394,13 +428,9 @@ fn query_name_owner(
     extension: metadata_extension.clone(),
 }
  */
-fn query_current_metadata(
-    id: &String,
-    cw721: &Addr,
-    deps: &DepsMut,
-) -> Result<Metadata, StdError> {
-    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::NftInfo{
-        token_id: id.clone()        
+fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<Metadata, StdError> {
+    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
+        token_id: id.clone(),
     };
     let req = QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: cw721.to_string(),
@@ -409,10 +439,10 @@ fn query_current_metadata(
     let res: NftInfoResponse<Metadata> = deps.querier.query(&req)?;
     Ok(res.extension)
 }
-fn send_data_update(name: &String,cw721: &Addr,data:Metadata) -> StdResult<CosmosMsg> {
-    let update=UpdateMetadataMsg {
+fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
+    let update = UpdateMetadataMsg {
         token_id: name.to_string(),
-        extension:Some(data)
+        extension: Some(data),
     };
     let resp: CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
