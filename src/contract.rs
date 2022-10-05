@@ -10,7 +10,7 @@ use archid::{
     UpdateMetadataMsg,
 };
 use cw_utils::{must_pay, Expiration};
-
+use std::convert::TryFrom;
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MetaDataUpdateMsg, QueryMsg, RecordExpirationResponse,
@@ -20,7 +20,7 @@ use crate::state::{config, config_read, mint_status, resolver, resolver_read, Co
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
-
+const MAX_BASE_INTERVAL:u64= 3;
 pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -77,6 +77,7 @@ pub fn execute(
             _update_config(deps, env, info, update_config)
         }
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
+        ExecuteMsg::RemoveSubDomain{ domain,subdomain}=>remove_subdomain(info, deps,env, domain,subdomain)
     }
 }
 
@@ -92,8 +93,13 @@ pub fn execute_register(
     let c: Config = config_read(deps.storage).load()?;
     let res = must_pay(&info, &String::from("ARCH"))?;
     let mut messages = Vec::new();
-    if res != c.base_cost {
+    let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
+    if registration < 1 {
         return Err(ContractError::InvalidPayment { amount: res });
+    }
+
+    if registration>MAX_BASE_INTERVAL{
+        registration=MAX_BASE_INTERVAL;
     }
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block) {
@@ -107,7 +113,7 @@ pub fn execute_register(
     //let _expiration= c.base_expiration + _env.block.time.seconds();
     let record = NameRecord {
         owner: info.sender.clone(),
-        expiration: c.base_expiration + _env.block.time.seconds(),
+        expiration: c.base_expiration.checked_mul(registration).unwrap()+ _env.block.time.seconds(),
     };
     let mint_resp = mint_handler(
         &name,
@@ -151,6 +157,7 @@ pub fn renew_registration(
     let resp = update_metadata_expiry(deps, &c.cw721, name, c.base_expiration + curr.expiration);
     Ok(Response::new().add_message(resp.unwrap()))
 }
+
 fn update_metadata_expiry(
     deps: DepsMut,
     cw721: &Addr,
@@ -231,14 +238,26 @@ fn set_subdomain(
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
 
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
+    
+
+    if !resolver(deps.storage).may_load(&key).unwrap().is_some() {
+       let metadata_msg=add_subdomain_metadata(
+            &deps,
+            &c.cw721,
+            domain.clone(),
+            subdomain.clone(),
+        )?;
+        messages.push(metadata_msg);
+    }   
+
     if domain_config.is_expired(&env.block) {
         return Err(ContractError::NameOwnershipExpired { name: domain });
     }
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-    if has_minted {
-        //let subdomain_config = (resolver(deps.storage).may_load(key)?).unwrap();
+    // revert if minted and not expired
+    if has_minted {        
         if !((resolver(deps.storage).may_load(key)?)
             .unwrap()
             .is_expired(&env.block))
@@ -274,6 +293,61 @@ fn set_subdomain(
     }
 }
 
+fn remove_subdomain(info: MessageInfo,
+    deps: DepsMut,
+    env: Env,    
+    domain: String,
+    subdomain: String) -> Result<Response, ContractError> {
+        let c: Config = config_read(deps.storage).load()?;
+        let domain_route = format!("{}.{}", subdomain, domain);
+        let key = domain_route.as_bytes();
+        let mut messages = Vec::new();
+        let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+        let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
+       
+        if owner_response.owner != info.sender {
+            return Err(ContractError::Unauthorized {});
+        }
+        if has_minted {        
+            if !((resolver(deps.storage).may_load(key)?)
+                .unwrap()
+                .is_expired(&env.block))
+            {
+                return Err(ContractError::NameTaken { name: domain_route });
+            }
+            messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
+            messages.push(burn_handler(&domain_route, &c.cw721)?);
+        }
+        resolver(deps.storage).remove(key);
+        Ok(Response::new().add_messages(messages))
+    }
+fn add_subdomain_metadata(
+    deps: &DepsMut,
+    cw721: &Addr,
+    name: String,
+    subdomain: String,
+) -> StdResult<CosmosMsg> {
+    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
+    subdomains.push(subdomain);
+    current_metadata.subdomains=Some((*subdomains).to_vec());
+    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    Ok(resp)
+}
+fn remove_subdomain_metadata(
+    deps: &DepsMut,
+    cw721: &Addr,
+    name: String,
+    subdomain: String,
+) -> StdResult<CosmosMsg> {
+    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
+    
+    subdomains.retain(|item| &item.as_bytes() !=&subdomain.as_bytes());
+    current_metadata.subdomains=Some((*subdomains).to_vec());
+    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    Ok(resp)
+}
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -319,11 +393,11 @@ fn mint_handler(
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let mint_extension = Some(Metadata {
-        description: Some(String::from("subdomain")),
+        description: Some(String::from("An arch id domain")),
         name: Some(name.clone()),
         image: None,
         expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
-        domain: None,
+        domain: Some(name.clone()),
         subdomains: Some(vec![]),
         accounts: Some(vec![]),
         websites: Some(vec![]),
@@ -422,12 +496,7 @@ fn query_name_owner(
     let res: OwnerOfResponse = deps.querier.query(&req)?;
     Ok(res)
 }
-/**
- * NftInfoResponse::<Extension> {
-    token_uri: None,
-    extension: metadata_extension.clone(),
-}
- */
+
 fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<Metadata, StdError> {
     let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
         token_id: id.clone(),

@@ -374,7 +374,7 @@ fn test_expired_domains() {
     let info1: NftInfoResponse<Metadata> = query(
         &mut app,
         nft.clone(),
-        Cw721QueryMsg::NftInfo {
+        Cw721QueryMsg::<Extension>::NftInfo {
             token_id: String::from("simpletest"),
         },
     )

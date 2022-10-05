@@ -43,6 +43,10 @@ pub enum ExecuteMsg {
         mint: bool,
         expiration: u64,
     },
+    RemoveSubDomain {
+        domain: String,
+        subdomain: String,    
+    },
     UpdateConfig {
         update_config: Config,
     },
