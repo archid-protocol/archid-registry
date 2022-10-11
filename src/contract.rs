@@ -192,7 +192,7 @@ fn update_resolver(
     new_resolver: Addr,
 ) -> Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
-    let owner_response = query_name_owner(&name, &c.cw721, &deps).unwrap();
+    let owner_response = query_name_owner(&name, &c.cw721, &deps)?;
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
