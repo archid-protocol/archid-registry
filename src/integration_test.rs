@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Timestamp, Uint128, WasmMsg, WasmQuery,
 };
 
-use archid::{
+use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Extension, InstantiateMsg as Cw721InstantiateMsg, Metadata,
     MintMsg, QueryMsg as Cw721QueryMsg,
 };
@@ -41,9 +41,9 @@ fn increment_block_time(router: &mut App, new_time: u64, height_incr: u64) {
 }
 pub fn contract_cw721() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        archid::entry::execute,
-        archid::entry::instantiate,
-        archid::entry::query,
+        archid_token::entry::execute,
+        archid_token::entry::instantiate,
+        archid_token::entry::query,
     );
     Box::new(contract)
 }

@@ -9,24 +9,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9a8f622bcf6ff3df478e9deba3e03e4e04b300f8e6a139e192c05fa3490afc7"
 
 [[package]]
-name = "archid"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-std",
- "cw2 0.11.1",
- "cw721 0.13.4",
- "cw721-base",
- "cw721-updatable",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "archid-registry"
 version = "0.1.0"
 dependencies = [
- "archid",
+ "archid-token",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -35,6 +21,20 @@ dependencies = [
  "cw-utils 0.13.4",
  "cw2 0.12.1",
  "cw721 0.11.1",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "archid-token"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "cw2 0.11.1",
+ "cw721 0.13.4",
+ "cw721-archid",
+ "cw721-updatable",
  "schemars",
  "serde",
  "thiserror",
@@ -337,7 +337,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw721-base"
+name = "cw721-archid"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-std",

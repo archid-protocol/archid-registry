@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw721::{NftInfoResponse, OwnerOfResponse};
 
-use archid::{
+use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
     UpdateMetadataMsg,
 };
@@ -402,7 +402,7 @@ fn mint_handler(
         accounts: Some(vec![]),
         websites: Some(vec![]),
     });
-    let mint_msg: archid::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg::<NameExtension> {
+    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg::<NameExtension> {
         token_id: name.to_string(),
         owner: creator.to_string(),
         token_uri: None,
@@ -485,7 +485,7 @@ fn query_name_owner(
     cw721: &Addr,
     deps: &DepsMut,
 ) -> Result<OwnerOfResponse, StdError> {
-    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+    let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
         token_id: id.clone(),
         include_expired: None,
     };
@@ -498,7 +498,7 @@ fn query_name_owner(
 }
 
 fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<Metadata, StdError> {
-    let query_msg: archid::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
+    let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
         token_id: id.clone(),
     };
     let req = QueryRequest::Wasm(WasmQuery::Smart {

@@ -52,7 +52,7 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
 cw-utils = "0.13.4"
 
-archid = {path = "../archid-token/"}
+archid-token = {path = "../archid-token/"}
 [dev-dependencies]
 cosmwasm-schema = "1.0.0-beta"
 cw-multi-test = "0.13.2"

@@ -1,5 +1,5 @@
 use crate::state::Config;
-use archid::{Account, Website};
+use archid_token::{Account, Website};
 use cosmwasm_std::{Addr, Uint128};
 
 use schemars::JsonSchema;
