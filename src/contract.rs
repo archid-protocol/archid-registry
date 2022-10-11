@@ -3,7 +3,7 @@ use cosmwasm_std::{
     MessageInfo, QueryRequest, Response, StdError, StdResult, Timestamp, Uint128, WasmMsg,
     WasmQuery,
 };
-use cw721::{NftInfoResponse, OwnerOfResponse};
+use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
