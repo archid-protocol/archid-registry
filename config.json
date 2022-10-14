@@ -2,7 +2,7 @@
   "name": "archid-registry",
   "developer": {
     "archwayd": {
-      "docker": true
+      "docker": false
     },
     "scripts": {
       "test": "cargo unit-test",
@@ -29,7 +29,7 @@
     },
     "wasm": {
       "bech32Hrp": "archway",
-      "archwayd": "0.0.4",
+      "archwayd": "0.0.5",
       "configDir": ".archway",
       "binary": "archwayd"
     },
