@@ -182,10 +182,10 @@ fn basic_domain_test() {
         token_id: String::from("simpletest"),
         include_expired: None,
     };
-    // let owner_query2: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-    //     token_id: String::from("lolz"),
-    //     include_expired: None,
-    // };
+    let _owner_query2: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+        token_id: String::from("lolz"),
+        include_expired: None,
+    };
     let total: NumTokensResponse = query(
         &mut app,
         nft.clone(),
