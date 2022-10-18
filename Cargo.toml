@@ -1,7 +1,10 @@
 [package]
 name = "archid-registry"
 version = "0.1.0"
-authors = [""]
+authors = [
+  "johhonn <github.com/johhonn>",
+  "Drew Taylor <drew@chainofinsight.com>"
+]
 edition = "2018"
 
 exclude = [

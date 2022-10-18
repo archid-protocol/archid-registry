@@ -12,7 +12,14 @@
       "query": "archwayd query wasm",
       "tx": "archwayd tx wasm execute"
     },
-    "deployments": []
+    "deployments": [
+      {
+        "type": "store",
+        "chainId": "constantine-1",
+        "codeId": 192,
+        "txhash": "73440DDF6A0627A4362165E27835C221549E5297ED827885A323C738DE936983"
+      }
+    ]
   },
   "network": {
     "name": "constantine",
