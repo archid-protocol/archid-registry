@@ -91,7 +91,8 @@ pub fn execute_register(
     let key = &name.as_bytes();
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
-    let res = must_pay(&info, &String::from("ARCH"))?;
+    // let res = must_pay(&info, &String::from("ARCH"))?;
+    let res = must_pay(&info, &String::from("CONST"))?;
     let mut messages = Vec::new();
     let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
     if registration < 1 {
@@ -149,7 +150,8 @@ pub fn renew_registration(
         expiration: c.base_expiration + curr.expiration,
     };
 
-    let res = must_pay(&info, &String::from("ARCH"))?;
+    // let res = must_pay(&info, &String::from("ARCH"))?;
+    let res = must_pay(&info, &String::from("CONST"))?;
     if res != c.base_cost {
         return Err(ContractError::InvalidPayment { amount: res });
     }
@@ -460,7 +462,8 @@ fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
     let msg = BankMsg::Send {
         to_address: to.into(),
         amount: (&[Coin {
-            denom: String::from("ARCH"),
+            // denom: String::from("ARCH"),
+            denom: String::from("CONST"),
             amount: amount,
         }])
             .to_vec(),

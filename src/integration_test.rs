@@ -121,7 +121,8 @@ fn basic_domain_test() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        String::from("ARCH"),
+        // String::from("ARCH"),
+        String::from("CONST"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -161,7 +162,8 @@ fn basic_domain_test() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            denom: String::from("ARCH"),
+            // denom: String::from("ARCH"),
+            denom: String::from("CONST"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -171,7 +173,8 @@ fn basic_domain_test() {
             name_service.clone(),
             &register_msg,
             &[Coin {
-                denom: String::from("ARCH"),
+                // denom: String::from("ARCH"),
+                denom: String::from("CONST"),
                 amount: Uint128::from(5000u128)
             }]
         )
@@ -275,13 +278,15 @@ fn test_expired_domains() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        String::from("ARCH"),
+        // String::from("ARCH"),
+        String::from("CONST"),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
-        String::from("ARCH"),
+        // String::from("ARCH"),
+        String::from("CONST"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -314,7 +319,8 @@ fn test_expired_domains() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            denom: String::from("ARCH"),
+            // denom: String::from("ARCH"),
+            denom: String::from("CONST"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -349,7 +355,8 @@ fn test_expired_domains() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            denom: String::from("ARCH"),
+            // denom: String::from("ARCH"),
+            denom: String::from("CONST"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -391,13 +398,15 @@ fn test_subdomain_rules() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        String::from("ARCH"),
+        // String::from("ARCH"),
+        String::from("CONST"),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
-        String::from("ARCH"),
+        // String::from("ARCH"),
+        String::from("CONST"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -430,7 +439,8 @@ fn test_subdomain_rules() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            denom: String::from("ARCH"),
+            // denom: String::from("ARCH"),
+            denom: String::from("CONST"),
             amount: Uint128::from(5000u128),
         }],
     );
