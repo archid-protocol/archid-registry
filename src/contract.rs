@@ -234,7 +234,7 @@ fn set_subdomain(
     validate_name(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
-    let domain_route = format!("{}.{}", subdomain, domain);
+    let domain_route:String = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
@@ -251,7 +251,7 @@ fn set_subdomain(
         )?;
         messages.push(metadata_msg);
     }   
-
+    
     if domain_config.is_expired(&env.block) {
         return Err(ContractError::NameOwnershipExpired { name: domain });
     }
@@ -287,7 +287,7 @@ fn set_subdomain(
             let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
-        let resp = mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
+        let resp = domain_mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
     } else {
@@ -404,7 +404,38 @@ fn mint_handler(
         accounts: Some(vec![]),
         websites: Some(vec![]),
     });
-    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg::<NameExtension> {
+    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
+        token_id: name.to_string(),
+        owner: creator.to_string(),
+        token_uri: None,
+        extension: mint_extension,
+    });
+
+    let resp: CosmosMsg = WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&mint_msg)?,
+        funds: vec![],
+    }
+    .into();
+    Ok(resp)
+}
+fn domain_mint_handler(
+    name: &String,
+    creator: &Addr,
+    cw721: &Addr,
+    expiration: u64,
+) -> StdResult<CosmosMsg> {
+    let mint_extension = Some(Metadata {
+        description: Some(String::from("An arch id domain")),
+        name: Some(name.clone()),
+        image: None,
+        expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
+        domain: Some(name.clone()),
+        subdomains: Some(vec![]),
+        accounts: Some(vec![]),
+        websites: Some(vec![]),
+    });
+    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
         token_id: name.to_string(),
         owner: creator.to_string(),
         token_uri: None,
@@ -512,10 +543,10 @@ fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<M
     Ok(res.extension)
 }
 fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
-    let update = UpdateMetadataMsg {
+    let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
         token_id: name.to_string(),
         extension: Some(data),
-    };
+    });
     let resp: CosmosMsg = WasmMsg::Execute {
         contract_addr: cw721.to_string(),
         msg: to_binary(&update)?,
