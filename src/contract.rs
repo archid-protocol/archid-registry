@@ -17,7 +17,8 @@ use crate::msg::{
     ResolveRecordResponse,
 };
 use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-
+use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name};
+use crate::write_utils::{add_subdomain_metadata,remove_subdomain_metadata,domain_mint_handler,burn_handler,user_metadata_update_handler,remove_subdomain,send_tokens, send_data_update}
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
 const MAX_BASE_INTERVAL:u64= 3;
@@ -78,6 +79,14 @@ pub fn execute(
         }
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
         ExecuteMsg::RemoveSubDomain{ domain,subdomain}=>remove_subdomain(info, deps,env, domain,subdomain)
+    }
+}
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::ResolveRecord { name } => query_resolver(deps, env, name),
+        QueryMsg::RecordExpiration { name } => query_resolver_expiration(deps, env, name),
+        QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
     }
 }
 
@@ -159,59 +168,6 @@ pub fn renew_registration(
     let resp = update_metadata_expiry(deps, &c.cw721, name, c.base_expiration + curr.expiration);
     Ok(Response::new().add_message(resp.unwrap()))
 }
-
-fn update_metadata_expiry(
-    deps: DepsMut,
-    cw721: &Addr,
-    name: String,
-    expiration: u64,
-) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    current_metadata.expiry = Some(Expiration::AtTime(Timestamp::from_seconds(expiration)));
-    let resp = send_data_update(&name, &cw721, current_metadata)?;
-    Ok(resp)
-}
-// add reregister function so owners can extend their
-pub fn _update_config(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    config_update: Config,
-) -> Result<Response, ContractError> {
-    let c: Config = config_read(deps.storage).load()?;
-    if c.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    config(deps.storage).save(&config_update)?;
-    Ok(Response::default())
-}
-fn update_resolver(
-    info: MessageInfo,
-    deps: DepsMut,
-    env: Env,
-    name: String,
-    new_resolver: Addr,
-) -> Result<Response, ContractError> {
-    let c: Config = config_read(deps.storage).load()?;
-    let owner_response = query_name_owner(&name, &c.cw721, &deps)?;
-    if owner_response.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let key = name.as_bytes();
-    let curr = (resolver(deps.storage).may_load(key)?).unwrap();
-    if curr.is_expired(&env.block) {
-        return Err(ContractError::NameOwnershipExpired { name });
-    }
-    let key = name.as_bytes();
-    let record = NameRecord {
-        owner: new_resolver,
-        expiration: curr.expiration,
-    };
-    resolver(deps.storage).save(key, &record)?;
-    Ok(Response::default())
-}
 /**
 subdomain rules
 only minted by domain owner
@@ -220,6 +176,8 @@ expiration<= top level domain expiration
 when minted only nft owner can set subdomain resolver until expiration
 nft cannot be reminted unless burned by owner before expiration
 **/
+
+
 fn set_subdomain(
     info: MessageInfo,
     deps: DepsMut,
@@ -295,213 +253,59 @@ fn set_subdomain(
     }
 }
 
-fn remove_subdomain(info: MessageInfo,
+fn update_metadata_expiry(
     deps: DepsMut,
-    env: Env,    
-    domain: String,
-    subdomain: String) -> Result<Response, ContractError> {
-        let c: Config = config_read(deps.storage).load()?;
-        let domain_route = format!("{}.{}", subdomain, domain);
-        let key = domain_route.as_bytes();
-        let mut messages = Vec::new();
-        let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
-        let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-       
-        if owner_response.owner != info.sender {
-            return Err(ContractError::Unauthorized {});
-        }
-        if has_minted {        
-            if !((resolver(deps.storage).may_load(key)?)
-                .unwrap()
-                .is_expired(&env.block))
-            {
-                return Err(ContractError::NameTaken { name: domain_route });
-            }
-            messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
-            messages.push(burn_handler(&domain_route, &c.cw721)?);
-        }
-        resolver(deps.storage).remove(key);
-        Ok(Response::new().add_messages(messages))
-    }
-fn add_subdomain_metadata(
-    deps: &DepsMut,
     cw721: &Addr,
     name: String,
-    subdomain: String,
+    expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
-    subdomains.push(subdomain);
-    current_metadata.subdomains=Some((*subdomains).to_vec());
+    current_metadata.expiry = Some(Expiration::AtTime(Timestamp::from_seconds(expiration)));
     let resp = send_data_update(&name, &cw721, current_metadata)?;
     Ok(resp)
 }
-fn remove_subdomain_metadata(
-    deps: &DepsMut,
-    cw721: &Addr,
-    name: String,
-    subdomain: String,
-) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
-    
-    subdomains.retain(|item| &item.as_bytes() !=&subdomain.as_bytes());
-    current_metadata.subdomains=Some((*subdomains).to_vec());
-    let resp = send_data_update(&name, &cw721, current_metadata)?;
-    Ok(resp)
-}
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::ResolveRecord { name } => query_resolver(deps, env, name),
-        QueryMsg::RecordExpiration { name } => query_resolver_expiration(deps, env, name),
-        QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
-    }
-}
-
-fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
-    let key = name.as_bytes();
-    let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
-
-    let address = match curr.is_expired(&_env.block) {
-        true => None,
-        false => Some(String::from(&curr.owner)),
-    };
-
-    let resp = ResolveRecordResponse {
-        address,
-        expiration: curr.expiration,
-    };
-    to_binary(&resp)
-}
-fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
-    let key = name.as_bytes();
-    let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
-    let resp = RecordExpirationResponse {
-        expiration: curr.expiration,
-    };
-    to_binary(&resp)
-}
-// let's not import a regexp library and just do these checks by hand
-fn invalid_char(c: char) -> bool {
-    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '-' || c == '_');
-    !is_valid
-}
-
-fn mint_handler(
-    name: &String,
-    creator: &Addr,
-    cw721: &Addr,
-    expiration: u64,
-) -> StdResult<CosmosMsg> {
-    let mint_extension = Some(Metadata {
-        description: Some(String::from("An arch id domain")),
-        name: Some(name.clone()),
-        image: None,
-        expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
-        domain: Some(name.clone()),
-        subdomains: Some(vec![]),
-        accounts: Some(vec![]),
-        websites: Some(vec![]),
-    });
-    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
-        token_id: name.to_string(),
-        owner: creator.to_string(),
-        token_uri: None,
-        extension: mint_extension,
-    });
-
-    let resp: CosmosMsg = WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&mint_msg)?,
-        funds: vec![],
-    }
-    .into();
-    Ok(resp)
-}
-fn domain_mint_handler(
-    name: &String,
-    creator: &Addr,
-    cw721: &Addr,
-    expiration: u64,
-) -> StdResult<CosmosMsg> {
-    let mint_extension = Some(Metadata {
-        description: Some(String::from("An arch id domain")),
-        name: Some(name.clone()),
-        image: None,
-        expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
-        domain: Some(name.clone()),
-        subdomains: Some(vec![]),
-        accounts: Some(vec![]),
-        websites: Some(vec![]),
-    });
-    let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
-        token_id: name.to_string(),
-        owner: creator.to_string(),
-        token_uri: None,
-        extension: mint_extension,
-    });
-
-    let resp: CosmosMsg = WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&mint_msg)?,
-        funds: vec![],
-    }
-    .into();
-    Ok(resp)
-}
-fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly {
-        token_id: name.to_string(),
-    };
-    let resp: CosmosMsg = WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&burn_msg)?,
-        funds: vec![],
-    }
-    .into();
-    Ok(resp)
-}
-fn user_metadata_update_handler(
+// add reregister function so owners can extend their
+pub fn _update_config(
+    deps: DepsMut,
+    _env: Env,
     info: MessageInfo,
-    deps: DepsMut,
-    name: String,
-    update: MetaDataUpdateMsg,
+    config_update: Config,
 ) -> Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
-    let cw721 = c.cw721;
-    let owner_response = query_name_owner(&name, &cw721, &deps).unwrap();
+    if c.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
 
+    config(deps.storage).save(&config_update)?;
+    Ok(Response::default())
+}
+pub fn update_resolver(
+    info: MessageInfo,
+    deps: DepsMut,
+    env: Env,
+    name: String,
+    new_resolver: Addr,
+) -> Result<Response, ContractError> {
+    let c: Config = config_read(deps.storage).load()?;
+    let owner_response = query_name_owner(&name, &c.cw721, &deps)?;
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-    let current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    let new_metadata = Metadata {
-        description: update.clone().description,
-        name: Some(name.clone()),
-        image: update.clone().description,
-        expiry: current_metadata.expiry,
-        domain: current_metadata.domain,
-        subdomains: current_metadata.subdomains,
-        accounts: update.clone().accounts,
-        websites: update.clone().websites,
+
+    let key = name.as_bytes();
+    let curr = (resolver(deps.storage).may_load(key)?).unwrap();
+    if curr.is_expired(&env.block) {
+        return Err(ContractError::NameOwnershipExpired { name });
+    }
+    let key = name.as_bytes();
+    let record = NameRecord {
+        owner: new_resolver,
+        expiration: curr.expiration,
     };
-    let resp = send_data_update(&name, &cw721, new_metadata);
-    Ok(Response::new().add_message(resp.unwrap()))
+    resolver(deps.storage).save(key, &record)?;
+    Ok(Response::default())
 }
-fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
-    let msg = BankMsg::Send {
-        to_address: to.into(),
-        amount: (&[Coin {
-            // denom: String::from("ARCH"),
-            denom: String::from("CONST"),
-            amount: amount,
-        }])
-            .to_vec(),
-    };
-    Ok(msg.into())
-}
-fn withdraw_fees(
+pub fn withdraw_fees(
     info: MessageInfo,
     deps: DepsMut,
     amount: Uint128,
@@ -514,68 +318,5 @@ fn withdraw_fees(
     Ok(Response::new().add_message(resp))
 }
 
-fn query_name_owner(
-    id: &String,
-    cw721: &Addr,
-    deps: &DepsMut,
-) -> Result<OwnerOfResponse, StdError> {
-    let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: id.clone(),
-        include_expired: None,
-    };
-    let req = QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&query_msg).unwrap(),
-    });
-    let res: OwnerOfResponse = deps.querier.query(&req)?;
-    Ok(res)
-}
 
-fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<Metadata, StdError> {
-    let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
-        token_id: id.clone(),
-    };
-    let req = QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&query_msg).unwrap(),
-    });
-    let res: NftInfoResponse<Metadata> = deps.querier.query(&req)?;
-    Ok(res.extension)
-}
-fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
-    let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
-        token_id: name.to_string(),
-        extension: Some(data),
-    });
-    let resp: CosmosMsg = WasmMsg::Execute {
-        contract_addr: cw721.to_string(),
-        msg: to_binary(&update)?,
-        funds: vec![],
-    }
-    .into();
-    Ok(resp)
-}
-/// validate_name returns an error if the name is invalid
-/// (we require 3-64 lowercase ascii letters, numbers, or . - _)
-fn validate_name(name: &str) -> Result<(), ContractError> {
-    let length = name.len() as u64;
-    if (name.len() as u64) < MIN_NAME_LENGTH {
-        Err(ContractError::NameTooShort {
-            length,
-            min_length: MIN_NAME_LENGTH,
-        })
-    } else if (name.len() as u64) > MAX_NAME_LENGTH {
-        Err(ContractError::NameTooLong {
-            length,
-            max_length: MAX_NAME_LENGTH,
-        })
-    } else {
-        match name.find(invalid_char) {
-            None => Ok(()),
-            Some(bytepos_invalid_char_start) => {
-                let c = name[bytepos_invalid_char_start..].chars().next().unwrap();
-                Err(ContractError::InvalidCharacter { c })
-            }
-        }
-    }
-}
+
