@@ -17,7 +17,7 @@ use crate::msg::{
     ResolveRecordResponse,
 };
 use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-
+use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name,query_current_metadata};
 
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
@@ -48,7 +48,7 @@ pub fn remove_subdomain_metadata(
 }
 
 
-pub fn domain_mint_handler(
+pub fn mint_handler(
     name: &String,
     creator: &Addr,
     cw721: &Addr,

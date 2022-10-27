@@ -17,7 +17,8 @@ use crate::msg::{
     ResolveRecordResponse,
 };
 use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-
+const MIN_NAME_LENGTH: u64 = 3;
+const MAX_NAME_LENGTH: u64 = 64;
 //{query_name_owner,query_resolver,query_resolver_expiration,validate_name}
 pub fn query_name_owner(
     id: &String,
@@ -60,6 +61,21 @@ pub fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResu
     to_binary(&resp)
 }
 
+pub fn query_current_metadata(id: &String, cw721: &Addr, deps: &DepsMut) -> Result<Metadata, StdError> {
+    let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
+        token_id: id.clone(),
+    };
+    let req = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&query_msg).unwrap(),
+    });
+    let res: NftInfoResponse<Metadata> = deps.querier.query(&req)?;
+    Ok(res.extension)
+}
+fn invalid_char(c: char) -> bool {
+    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '-' || c == '_');
+    !is_valid
+}
 /// validate_name returns an error if the name is invalid
 /// (we require 3-64 lowercase ascii letters, numbers, or . - _)
 pub fn validate_name(name: &str) -> Result<(), ContractError> {

@@ -17,10 +17,9 @@ use crate::msg::{
     ResolveRecordResponse,
 };
 use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name};
-use crate::write_utils::{add_subdomain_metadata,remove_subdomain_metadata,domain_mint_handler,burn_handler,user_metadata_update_handler,remove_subdomain,send_tokens, send_data_update}
-const MIN_NAME_LENGTH: u64 = 3;
-const MAX_NAME_LENGTH: u64 = 64;
+use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name,query_current_metadata};
+use crate::write_utils::{add_subdomain_metadata,remove_subdomain_metadata,mint_handler,burn_handler,user_metadata_update_handler,remove_subdomain,send_tokens, send_data_update};
+
 const MAX_BASE_INTERVAL:u64= 3;
 pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -245,7 +244,7 @@ fn set_subdomain(
             let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
-        let resp = domain_mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
+        let resp = mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
     } else {
