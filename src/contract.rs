@@ -197,7 +197,10 @@ fn set_subdomain(
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
 
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-    
+    let _expiration = match &expiration > &domain_config.expiration {
+        true => &domain_config.expiration,
+        false => &expiration,
+    };
 
     if !resolver(deps.storage).may_load(&key).unwrap().is_some() {
        let metadata_msg=add_subdomain_metadata(
@@ -205,17 +208,12 @@ fn set_subdomain(
             &c.cw721,
             domain.clone(),
             subdomain.clone(),
+            new_resolver.clone(),
+            _expiration.clone(),
+            mint,            
         )?;
         messages.push(metadata_msg);
     }   
-    
-    if domain_config.is_expired(&env.block) {
-        return Err(ContractError::NameOwnershipExpired { name: domain });
-    }
-    if owner_response.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-    // revert if minted and not expired
     if has_minted {        
         if !((resolver(deps.storage).may_load(key)?)
             .unwrap()
@@ -224,13 +222,18 @@ fn set_subdomain(
             return Err(ContractError::NameTaken { name: domain_route });
         }
     }
+    if domain_config.is_expired(&env.block) {
+        return Err(ContractError::NameOwnershipExpired { name: domain });
+    }
+    if owner_response.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+    // revert if minted and not expired
+    
     if env.block.time >= Timestamp::from_seconds(expiration) {
         return Err(ContractError::InvalidInput {});
     }
-    let _expiration = match &expiration > &domain_config.expiration {
-        true => &domain_config.expiration,
-        false => &expiration,
-    };
+    
 
     let record = NameRecord {
         owner: new_resolver.clone(),

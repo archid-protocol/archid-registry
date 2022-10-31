@@ -7,7 +7,7 @@ use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
-    UpdateMetadataMsg,
+    UpdateMetadataMsg,Subdomain
 };
 use cw_utils::{must_pay, Expiration};
 use std::convert::TryFrom;
@@ -24,10 +24,14 @@ pub fn add_subdomain_metadata(
     cw721: &Addr,
     name: String,
     subdomain: String,
+    resolver:Addr,
+    expiry:u64,
+    minted:bool
+    
 ) -> StdResult<CosmosMsg> {
     let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
-    subdomains.push(subdomain);
+    let mut subdomains:Vec<Subdomain> =current_metadata.subdomains.as_ref().unwrap().clone();
+    subdomains.push(Subdomain{name:Some(subdomain),resolver:Some(resolver),minted:Some(minted),expiry:Some(expiry)});
     current_metadata.subdomains=Some((*subdomains).to_vec());
     let resp = send_data_update(&name, &cw721, current_metadata)?;
     Ok(resp)
@@ -41,7 +45,7 @@ pub fn remove_subdomain_metadata(
     let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
     let mut subdomains =current_metadata.subdomains.as_ref().unwrap().clone();
     
-    subdomains.retain(|item| &item.as_bytes() !=&subdomain.as_bytes());
+    subdomains.retain(|item| item.name.as_ref().unwrap().as_bytes() !=subdomain.as_bytes());
     current_metadata.subdomains=Some((*subdomains).to_vec());
     let resp = send_data_update(&name, &cw721, current_metadata)?;
     Ok(resp)
