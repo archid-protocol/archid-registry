@@ -62,7 +62,7 @@ pub fn mint_handler(
         description: Some(String::from("An arch id domain")),
         name: Some(name.clone()),
         image: None,
-        expiry: Some(Expiration::AtTime(Timestamp::from_seconds(expiration))),
+        expiry: Some(expiration),
         domain: Some(name.clone()),
         subdomains: Some(vec![]),
         accounts: Some(vec![]),

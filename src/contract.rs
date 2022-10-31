@@ -262,7 +262,7 @@ fn update_metadata_expiry(
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    current_metadata.expiry = Some(Expiration::AtTime(Timestamp::from_seconds(expiration)));
+    current_metadata.expiry = Some(expiration);
     let resp = send_data_update(&name, &cw721, current_metadata)?;
     Ok(resp)
 }
