@@ -122,7 +122,7 @@ fn basic_domain_test() {
         &mut app,
         name_owner.to_string(),
         // String::from("ARCH"),
-        String::from("CONST"),
+        String::from("uconst"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -163,7 +163,7 @@ fn basic_domain_test() {
         &register_msg,
         &[Coin {
             // denom: String::from("ARCH"),
-            denom: String::from("CONST"),
+            denom: String::from("uconst"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -174,7 +174,7 @@ fn basic_domain_test() {
             &register_msg,
             &[Coin {
                 // denom: String::from("ARCH"),
-                denom: String::from("CONST"),
+                denom: String::from("uconst"),
                 amount: Uint128::from(5000u128)
             }]
         )
@@ -279,14 +279,14 @@ fn test_expired_domains() {
         &mut app,
         name_owner.to_string(),
         // String::from("ARCH"),
-        String::from("CONST"),
+        String::from("uconst"),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
         // String::from("ARCH"),
-        String::from("CONST"),
+        String::from("uconst"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -320,7 +320,7 @@ fn test_expired_domains() {
         &register_msg,
         &[Coin {
             // denom: String::from("ARCH"),
-            denom: String::from("CONST"),
+            denom: String::from("uconst"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -356,7 +356,7 @@ fn test_expired_domains() {
         &register_msg,
         &[Coin {
             // denom: String::from("ARCH"),
-            denom: String::from("CONST"),
+            denom: String::from("uconst"),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -399,14 +399,14 @@ fn test_subdomain_rules() {
         &mut app,
         name_owner.to_string(),
         // String::from("ARCH"),
-        String::from("CONST"),
+        String::from("uconst"),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
         // String::from("ARCH"),
-        String::from("CONST"),
+        String::from("uconst"),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -440,7 +440,7 @@ fn test_subdomain_rules() {
         &register_msg,
         &[Coin {
             // denom: String::from("ARCH"),
-            denom: String::from("CONST"),
+            denom: String::from("uconst"),
             amount: Uint128::from(5000u128),
         }],
     );

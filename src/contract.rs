@@ -99,8 +99,7 @@ pub fn execute_register(
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
     // let res = must_pay(&info, &String::from("ARCH"))?;
-    let denom: &str = "CONST";
-    let res = must_pay(&info, denom)?;
+    let res = must_pay(&info, &String::from("uconst"))?;
     let mut messages = Vec::new();
     let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
     if registration < 1 {
@@ -159,7 +158,7 @@ pub fn renew_registration(
     };
 
     // let res = must_pay(&info, &String::from("ARCH"))?;
-    let res = must_pay(&info, &String::from("CONST"))?;
+    let res = must_pay(&info, &String::from("uconst"))?;
     if res != c.base_cost {
         return Err(ContractError::InvalidPayment { amount: res });
     }
