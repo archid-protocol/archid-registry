@@ -1,22 +1,16 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdError, StdResult, Timestamp, Uint128, WasmMsg,
-    WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, QueryRequest, StdError, StdResult, WasmQuery,
 };
-use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
+use cw721_updatable::{NftInfoResponse, OwnerOfResponse,};
 use archid_token::{
-    ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
-    UpdateMetadataMsg,
+    Extension, Metadata, QueryMsg as Cw721QueryMsg,
 };
-use cw_utils::{must_pay, Expiration};
-use std::convert::TryFrom;
+
 use crate::error::ContractError;
-use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MetaDataUpdateMsg, QueryMsg, RecordExpirationResponse,
-    ResolveRecordResponse,
-};
-use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
+use crate::msg::{ResolveRecordResponse,RecordExpirationResponse,};
+use crate::state::{resolver_read,};
+
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
 //{query_name_owner,query_resolver,query_resolver_expiration,validate_name}

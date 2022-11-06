@@ -1,24 +1,23 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdError, StdResult, Timestamp, Uint128, WasmMsg,
-    WasmQuery,
+    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Timestamp, Uint128,
 };
-use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use archid_token::{
-    ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
-    UpdateMetadataMsg,
+    Metadata,
 };
-use cw_utils::{must_pay, Expiration};
+use cw_utils::{must_pay};
 use std::convert::TryFrom;
 use crate::error::ContractError;
-use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MetaDataUpdateMsg, QueryMsg, RecordExpirationResponse,
-    ResolveRecordResponse,
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg,};
+use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
+use crate::read_utils::{
+    query_name_owner, query_resolver, query_resolver_expiration, validate_name, query_current_metadata
 };
-use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name,query_current_metadata};
-use crate::write_utils::{add_subdomain_metadata,remove_subdomain_metadata,mint_handler,burn_handler,user_metadata_update_handler,remove_subdomain,send_tokens, send_data_update};
+use crate::write_utils::{
+    add_subdomain_metadata, mint_handler, burn_handler, user_metadata_update_handler, remove_subdomain,
+    send_tokens, send_data_update
+};
 
 const MAX_BASE_INTERVAL:u64= 3;
 pub type NameExtension = Option<Metadata>;
@@ -100,7 +99,8 @@ pub fn execute_register(
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
     // let res = must_pay(&info, &String::from("ARCH"))?;
-    let res = must_pay(&info, &String::from("CONST"))?;
+    let denom: &str = "CONST";
+    let res = must_pay(&info, denom)?;
     let mut messages = Vec::new();
     let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
     if registration < 1 {

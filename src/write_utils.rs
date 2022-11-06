@@ -1,23 +1,23 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdError, StdResult, Timestamp, Uint128, WasmMsg,
-    WasmQuery,
+    to_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env,
+    MessageInfo, Response, StdResult, Uint128, WasmMsg,
 };
-use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use archid_token::{
-    ExecuteMsg as Cw721ExecuteMsg, Extension, Metadata, MintMsg, QueryMsg as Cw721QueryMsg,
-    UpdateMetadataMsg,Subdomain
+    ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, UpdateMetadataMsg, 
+    Subdomain,
 };
-use cw_utils::{must_pay, Expiration};
-use std::convert::TryFrom;
+
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MetaDataUpdateMsg, QueryMsg, RecordExpirationResponse,
-    ResolveRecordResponse,
+    MetaDataUpdateMsg,
 };
-use crate::state::{config, config_read, mint_status, resolver, resolver_read, Config, NameRecord};
-use crate::read_utils::{query_name_owner,query_resolver,query_resolver_expiration,validate_name,query_current_metadata};
+use crate::state::{
+    config_read, mint_status, resolver, Config,
+};
+use crate::read_utils::{
+    query_name_owner, query_current_metadata
+};
 
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
