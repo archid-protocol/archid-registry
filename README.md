@@ -1,6 +1,6 @@
 ## Archway Nameservice
 
-**Deployed contract_id(constantine-1 testnet)**: *archway1q5gt0quuj07yth7cnlp35p49pg22p2hyswdhpl22a2j8c0z74y0qv6yfer*
+**Deployed contract_id(constantine-1 testnet)**: *archway10q0ra2ud26sum7dla0kt3hhlnrfh84ajyutxh8h2hetjlass7hds788ahw*
 
 
 **Register name**:
