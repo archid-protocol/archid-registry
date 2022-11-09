@@ -114,7 +114,7 @@ pub fn user_metadata_update_handler(
     let new_metadata = Metadata {
         description: update.clone().description,
         name: Some(name.clone()),
-        image: update.clone().description,
+        image: update.clone().image,
         expiry: current_metadata.expiry,
         domain: current_metadata.domain,
         subdomains: current_metadata.subdomains,
