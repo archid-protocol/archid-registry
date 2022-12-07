@@ -135,7 +135,7 @@ pub fn user_metadata_update_handler(
 pub fn remove_subdomain(
     info: MessageInfo,
     deps: DepsMut,
-    _env: Env,    
+    env: Env,    
     domain: String,
     subdomain: String
 ) -> Result<Response, ContractError> {
@@ -153,14 +153,14 @@ pub fn remove_subdomain(
         // XXX (drew): To be reviewed
         // The below code makes it so top level domain owners
         // Cannot remove their subdomains unless they're expired
-        // which is problematic. Commented out for now
-
-        // if !((resolver(deps.storage).may_load(key)?)
-        //     .unwrap()
-        //     .is_expired(&env.block))
-        // {
-        //     return Err(ContractError::NameTaken { name: domain_route });
-        // }
+        // which is problematic, since subdomain resolver address 
+        // should be a contract in most cases.
+        if !((resolver(deps.storage).may_load(key)?)
+            .unwrap()
+            .is_expired(&env.block))
+        {
+            return Err(ContractError::NameTaken { name: domain_route });
+        }
         messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
         messages.push(burn_handler(&domain_route, &c.cw721)?);
     }

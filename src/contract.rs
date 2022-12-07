@@ -56,6 +56,7 @@ pub fn execute(
             domain,
             subdomain,
             new_resolver,
+            new_owner,
             mint,
             expiration,
         } => set_subdomain(
@@ -65,6 +66,7 @@ pub fn execute(
             domain,
             subdomain,
             new_resolver,
+            new_owner,
             mint,
             expiration,
         ),
@@ -182,6 +184,7 @@ fn set_subdomain(
     domain: String,
     subdomain: String,
     new_resolver: Addr,
+    new_owner: Addr,
     mint: bool,
     expiration: u64,
 ) -> Result<Response, ContractError> {
@@ -245,7 +248,7 @@ fn set_subdomain(
             let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
-        let resp = mint_handler(&domain_route, &new_resolver, &c.cw721, *_expiration)?;
+        let resp = mint_handler(&domain_route, &new_owner, &c.cw721, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
     } else {

@@ -35,11 +35,11 @@ pub enum ExecuteMsg {
         name: String,
         new_resolver: Addr,
     },
-
     RegisterSubDomain {
         domain: String,
         subdomain: String,
         new_resolver: Addr,
+        new_owner: Addr,
         mint: bool,
         expiration: u64,
     },

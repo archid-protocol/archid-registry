@@ -222,6 +222,7 @@ fn basic_domain_test() {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
         new_resolver: mock.clone(),
+        new_owner: mock.clone(),
         mint: false,
         expiration: expiration.expiration,
     };
@@ -245,6 +246,7 @@ fn basic_domain_test() {
         domain: String::from("simpletest"),
         subdomain: String::from("nft_subdomain"),
         new_resolver: mock.clone(),
+        new_owner: mock.clone(),
         mint: true,
         expiration: expiration.expiration,
     };
@@ -335,6 +337,7 @@ fn test_expired_domains() {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
         new_resolver: mock.clone(),
+        new_owner: mock.clone(),
         mint: false,
         expiration: current_time + 1000,
     };
@@ -441,6 +444,7 @@ fn test_subdomain_rules() {
         domain: String::from("simpletest"),
         subdomain: String::from("nft_subdomain"),
         new_resolver: name_owner2.clone(),
+        new_owner: mock.clone(),
         mint: true,
         expiration: current_time + 43200,
     };
