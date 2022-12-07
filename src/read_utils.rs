@@ -13,7 +13,7 @@ use crate::state::{resolver_read,};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
-//{query_name_owner,query_resolver,query_resolver_expiration,validate_name}
+
 pub fn query_name_owner(
     id: &String,
     cw721: &Addr,

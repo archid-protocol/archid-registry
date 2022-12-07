@@ -1,21 +1,23 @@
 #![cfg(test)]
-
+use serde::{de::DeserializeOwned, Serialize};
 use cosmwasm_std::{
     to_binary, Addr, Coin, Empty, QueryRequest, StdError,
     Timestamp, Uint128, WasmQuery,
 };
+use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+
 use archid_token::{
     Extension, InstantiateMsg as Cw721InstantiateMsg, Metadata, QueryMsg as Cw721QueryMsg,
 };
 use cw721_updatable::{
     NftInfoResponse, NumTokensResponse, OwnerOfResponse,
 };
-use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
 };
 use crate::state::Config;
-use serde::{de::DeserializeOwned, Serialize};
+use crate::write_utils::DENOM;
 
 fn mock_app() -> App {
     App::default()
@@ -121,8 +123,7 @@ fn basic_domain_test() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        // String::from("ARCH"),
-        String::from("uconst"),
+        String::from(DENOM),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -278,15 +279,13 @@ fn test_expired_domains() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        // String::from("ARCH"),
-        String::from("uconst"),
+        String::from(DENOM),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
-        // String::from("ARCH"),
-        String::from("uconst"),
+        String::from(DENOM),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(
@@ -398,15 +397,13 @@ fn test_subdomain_rules() {
     mint_native(
         &mut app,
         name_owner.to_string(),
-        // String::from("ARCH"),
-        String::from("uconst"),
+        String::from(DENOM),
         Uint128::from(10000u128),
     );
     mint_native(
         &mut app,
         name_owner2.to_string(),
-        // String::from("ARCH"),
-        String::from("uconst"),
+        String::from(DENOM),
         Uint128::from(10000u128),
     );
     let name_service = create_name_service(

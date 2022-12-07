@@ -19,6 +19,8 @@ use crate::read_utils::{
     query_name_owner, query_current_metadata
 };
 
+pub static DENOM: &str = "uconst";
+
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
     cw721: &Addr,
@@ -125,57 +127,59 @@ pub fn user_metadata_update_handler(
     Ok(Response::new().add_message(resp.unwrap()))
 }
 
-pub fn remove_subdomain(info: MessageInfo,
+pub fn remove_subdomain(
+    info: MessageInfo,
     deps: DepsMut,
     env: Env,    
     domain: String,
-    subdomain: String) -> Result<Response, ContractError> {
-        let c: Config = config_read(deps.storage).load()?;
-        let domain_route = format!("{}.{}", subdomain, domain);
-        let key = domain_route.as_bytes();
-        let mut messages = Vec::new();
-        let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
-        let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-       
-        if owner_response.owner != info.sender {
-            return Err(ContractError::Unauthorized {});
-        }
-        if has_minted {        
-            if !((resolver(deps.storage).may_load(key)?)
-                .unwrap()
-                .is_expired(&env.block))
-            {
-                return Err(ContractError::NameTaken { name: domain_route });
-            }
-            messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
-            messages.push(burn_handler(&domain_route, &c.cw721)?);
-        }
-        resolver(deps.storage).remove(key);
-        Ok(Response::new().add_messages(messages))
+    subdomain: String
+) -> Result<Response, ContractError> {
+    let c: Config = config_read(deps.storage).load()?;
+    let domain_route = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let mut messages = Vec::new();
+    let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+    let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
+    
+    if owner_response.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
     }
-pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
-        let msg = BankMsg::Send {
-            to_address: to.into(),
-            amount: (&[Coin {
-                // denom: String::from("ARCH"),
-                denom: String::from("CONST"),
-                amount: amount,
-            }])
-                .to_vec(),
-        };
-        Ok(msg.into())
+    if has_minted {        
+        if !((resolver(deps.storage).may_load(key)?)
+            .unwrap()
+            .is_expired(&env.block))
+        {
+            return Err(ContractError::NameTaken { name: domain_route });
+        }
+        messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
+        messages.push(burn_handler(&domain_route, &c.cw721)?);
     }
+    resolver(deps.storage).remove(key);
+    Ok(Response::new().add_messages(messages))
+}
 
-  pub  fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
-        let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
-            token_id: name.to_string(),
-            extension: Some(data),
-        });
-        let resp: CosmosMsg = WasmMsg::Execute {
-            contract_addr: cw721.to_string(),
-            msg: to_binary(&update)?,
-            funds: vec![],
-        }
-        .into();
-        Ok(resp)
+pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+    let msg = BankMsg::Send {
+        to_address: to.into(),
+        amount: (&[Coin {
+            denom: String::from(DENOM),
+            amount: amount,
+        }])
+            .to_vec(),
+    };
+    Ok(msg.into())
+}
+
+pub  fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
+    let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
+        token_id: name.to_string(),
+        extension: Some(data),
+    });
+    let resp: CosmosMsg = WasmMsg::Execute {
+        contract_addr: cw721.to_string(),
+        msg: to_binary(&update)?,
+        funds: vec![],
     }
+    .into();
+    Ok(resp)
+}
