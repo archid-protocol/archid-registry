@@ -60,15 +60,20 @@ pub fn mint_handler(
     cw721: &Addr,
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
+    let subdomains = if name.clone().contains(".") { None } else { Some(vec![]) };
+    let accounts = if name.clone().contains(".") { None } else { Some(vec![]) };
+    let websites = if name.clone().contains(".") { None } else { Some(vec![]) };
+    let description = if name.clone().contains(".") { [name, " archid  subdomain"].concat() } else { [name, " archid  domain"].concat() };
+
     let mint_extension = Some(Metadata {
-        description: Some(String::from("An arch id domain")),
+        description: Some(description),
         name: Some(name.clone()),
         image: None,
         expiry: Some(expiration),
         domain: Some(name.clone()),
-        subdomains: Some(vec![]),
-        accounts: Some(vec![]),
-        websites: Some(vec![]),
+        subdomains: subdomains,
+        accounts: accounts,
+        websites: websites,
     });
     let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
         token_id: name.to_string(),
@@ -130,7 +135,7 @@ pub fn user_metadata_update_handler(
 pub fn remove_subdomain(
     info: MessageInfo,
     deps: DepsMut,
-    env: Env,    
+    _env: Env,    
     domain: String,
     subdomain: String
 ) -> Result<Response, ContractError> {
@@ -144,13 +149,18 @@ pub fn remove_subdomain(
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-    if has_minted {        
-        if !((resolver(deps.storage).may_load(key)?)
-            .unwrap()
-            .is_expired(&env.block))
-        {
-            return Err(ContractError::NameTaken { name: domain_route });
-        }
+    if has_minted {
+        // XXX (drew): To be reviewed
+        // The below code makes it so top level domain owners
+        // Cannot remove their subdomains unless they're expired
+        // which is problematic. Commented out for now
+
+        // if !((resolver(deps.storage).may_load(key)?)
+        //     .unwrap()
+        //     .is_expired(&env.block))
+        // {
+        //     return Err(ContractError::NameTaken { name: domain_route });
+        // }
         messages.push(remove_subdomain_metadata(&deps,&c.cw721,domain.clone(),subdomain.clone()).unwrap());
         messages.push(burn_handler(&domain_route, &c.cw721)?);
     }
