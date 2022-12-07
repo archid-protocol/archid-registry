@@ -98,6 +98,7 @@
             "domain",
             "expiration",
             "mint",
+            "new_owner",
             "new_resolver",
             "subdomain"
           ],
@@ -112,6 +113,9 @@
             },
             "mint": {
               "type": "boolean"
+            },
+            "new_owner": {
+              "$ref": "#/definitions/Addr"
             },
             "new_resolver": {
               "$ref": "#/definitions/Addr"
