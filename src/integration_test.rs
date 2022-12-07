@@ -163,8 +163,7 @@ fn basic_domain_test() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            // denom: String::from("ARCH"),
-            denom: String::from("uconst"),
+            denom: String::from(DENOM),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -174,8 +173,7 @@ fn basic_domain_test() {
             name_service.clone(),
             &register_msg,
             &[Coin {
-                // denom: String::from("ARCH"),
-                denom: String::from("uconst"),
+                denom: String::from(DENOM),
                 amount: Uint128::from(5000u128)
             }]
         )
@@ -318,8 +316,7 @@ fn test_expired_domains() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            // denom: String::from("ARCH"),
-            denom: String::from("uconst"),
+            denom: String::from(DENOM),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -354,8 +351,7 @@ fn test_expired_domains() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            // denom: String::from("ARCH"),
-            denom: String::from("uconst"),
+            denom: String::from(DENOM),
             amount: Uint128::from(5000u128),
         }],
     );
@@ -436,8 +432,7 @@ fn test_subdomain_rules() {
         name_service.clone(),
         &register_msg,
         &[Coin {
-            // denom: String::from("ARCH"),
-            denom: String::from("uconst"),
+            denom: String::from(DENOM),
             amount: Uint128::from(5000u128),
         }],
     );

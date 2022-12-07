@@ -16,7 +16,7 @@ use crate::read_utils::{
 };
 use crate::write_utils::{
     add_subdomain_metadata, mint_handler, burn_handler, user_metadata_update_handler, remove_subdomain,
-    send_tokens, send_data_update
+    send_tokens, send_data_update, DENOM,
 };
 
 const MAX_BASE_INTERVAL:u64= 3;
@@ -98,8 +98,7 @@ pub fn execute_register(
     let key = &name.as_bytes();
     let curr = resolver(deps.storage).may_load(key)?;
     let c: Config = config_read(deps.storage).load()?;
-    // let res = must_pay(&info, &String::from("ARCH"))?;
-    let res = must_pay(&info, &String::from("uconst"))?;
+    let res = must_pay(&info, &String::from(DENOM))?;
     let mut messages = Vec::new();
     let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
     if registration < 1 {
