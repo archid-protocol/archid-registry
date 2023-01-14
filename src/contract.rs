@@ -197,7 +197,7 @@ fn set_subdomain(
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
     let domain_route: String = format!("{}.{}", subdomain, domain);
-    ///println!("{}",domain_route);
+    //println!("{}",domain_route);
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
