@@ -45,7 +45,7 @@ pub enum ExecuteMsg {
     },
     RemoveSubDomain {
         domain: String,
-        subdomain: String,    
+        subdomain: String,
     },
     UpdateConfig {
         update_config: Config,

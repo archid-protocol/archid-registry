@@ -1,17 +1,14 @@
 #![cfg(test)]
-use serde::{de::DeserializeOwned, Serialize};
 use cosmwasm_std::{
-    to_binary, Addr, Coin, Empty, QueryRequest, StdError,
-    Timestamp, Uint128, WasmQuery,
+    to_binary, Addr, Coin, Empty, QueryRequest, StdError, Timestamp, Uint128, WasmQuery,
 };
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+use serde::{de::DeserializeOwned, Serialize};
 
 use archid_token::{
     Extension, InstantiateMsg as Cw721InstantiateMsg, Metadata, QueryMsg as Cw721QueryMsg,
 };
-use cw721_updatable::{
-    NftInfoResponse, NumTokensResponse, OwnerOfResponse,
-};
+use cw721_updatable::{NftInfoResponse, NumTokensResponse, OwnerOfResponse};
 
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
@@ -149,7 +146,8 @@ fn basic_domain_test() {
     // app
     //     .execute_contract(owner.clone(), nft.clone(), &mint_msg, &[])
     //     .unwrap();
-    let _config_update = app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
+    let _config_update =
+        app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
 
     let _info: Config = query(&mut app, name_service.clone(), QueryMsg::Config {}).unwrap();
     let register_msg = ExecuteMsg::Register {
@@ -158,7 +156,7 @@ fn basic_domain_test() {
     assert!(app
         .execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[])
         .is_err());
-    println!{"first register"};
+    println! {"first register"};
     let res = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
@@ -308,7 +306,8 @@ fn test_expired_domains() {
     let update_msg = ExecuteMsg::UpdateConfig {
         update_config: update_config,
     };
-    let _config_update = app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
+    let _config_update =
+        app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
 
     let _info: Config = query(&mut app, name_service.clone(), QueryMsg::Config {}).unwrap();
     let register_msg = ExecuteMsg::Register {
@@ -425,7 +424,8 @@ fn test_subdomain_rules() {
     let update_msg = ExecuteMsg::UpdateConfig {
         update_config: update_config,
     };
-    let _config_update = app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
+    let _config_update =
+        app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
 
     let _info: Config = query(&mut app, name_service.clone(), QueryMsg::Config {}).unwrap();
     let register_msg = ExecuteMsg::Register {
