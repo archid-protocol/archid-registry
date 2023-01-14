@@ -328,7 +328,7 @@ fn test_expired_domains() {
         &mut app,
         name_service.clone(),
         QueryMsg::ResolveRecord {
-            name: String::from("simpletest"),
+            name: String::from("simpletest.arch"),
         },
     )
     .unwrap();
@@ -360,7 +360,7 @@ fn test_expired_domains() {
         }],
     );
     let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: String::from("simpletest"),
+        token_id: String::from("simpletest.arch"),
         include_expired: None,
     };
 
@@ -370,7 +370,7 @@ fn test_expired_domains() {
         &mut app,
         nft.clone(),
         Cw721QueryMsg::<Extension>::NftInfo {
-            token_id: String::from("simpletest"),
+            token_id: String::from("simpletest.arch"),
         },
     )
     .unwrap();
@@ -498,7 +498,7 @@ fn test_subdomain_rules() {
         &[],
     );
     let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: String::from("simpletest"),
+        token_id: String::from("simpletest.arch"),
         include_expired: None,
     };
 
