@@ -158,6 +158,7 @@ fn basic_domain_test() {
     assert!(app
         .execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[])
         .is_err());
+    println!{"first register"};
     let res = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
@@ -181,11 +182,11 @@ fn basic_domain_test() {
 
     println!("{:?}", res);
     let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: String::from("simpletest"),
+        token_id: String::from("simpletest.arch"),
         include_expired: None,
     };
     let _owner_query2: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: String::from("lolz"),
+        token_id: String::from("lolz.arch"),
         include_expired: None,
     };
     let total: NumTokensResponse = query(
@@ -200,7 +201,7 @@ fn basic_domain_test() {
         &mut app,
         name_service.clone(),
         QueryMsg::ResolveRecord {
-            name: String::from("simpletest"),
+            name: String::from("simpletest.arch"),
         },
     )
     .unwrap();
@@ -213,7 +214,7 @@ fn basic_domain_test() {
         &mut app,
         name_service.clone(),
         QueryMsg::RecordExpiration {
-            name: String::from("simpletest"),
+            name: String::from("simpletest.arch"),
         },
     )
     .unwrap();
@@ -237,7 +238,7 @@ fn basic_domain_test() {
         &mut app,
         name_service.clone(),
         QueryMsg::ResolveRecord {
-            name: String::from("subdomain.simpletest"),
+            name: String::from("subdomain.simpletest.arch"),
         },
     )
     .unwrap();

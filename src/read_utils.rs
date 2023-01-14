@@ -9,11 +9,11 @@ use archid_token::{
 
 use crate::error::ContractError;
 use crate::msg::{ResolveRecordResponse,RecordExpirationResponse,};
-use crate::state::{resolver_read,};
+use crate::state::{resolver_read};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
-
+const SUFFIX:&str = ".arch";
 pub fn query_name_owner(
     id: &String,
     cw721: &Addr,
@@ -73,19 +73,26 @@ fn invalid_char(c: char) -> bool {
 /// validate_name returns an error if the name is invalid
 /// (we require 3-64 lowercase ascii letters, numbers, or . - _)
 pub fn validate_name(name: &str) -> Result<(), ContractError> {
+    
     let length = name.len() as u64;
-    if (name.len() as u64) < MIN_NAME_LENGTH {
+    let suffix_index=length as usize-SUFFIX.len();
+    let body= &name[0..suffix_index];
+    println!("{:?}",&name);
+    println!("{:?}",&body);
+    let domain=&name[suffix_index..length as usize];
+    println!("{:?}",&domain);
+    if (body.len() as u64) < MIN_NAME_LENGTH {
         Err(ContractError::NameTooShort {
             length,
             min_length: MIN_NAME_LENGTH,
         })
-    } else if (name.len() as u64) > MAX_NAME_LENGTH {
+    } else if (body.len() as u64) > MAX_NAME_LENGTH {
         Err(ContractError::NameTooLong {
             length,
             max_length: MAX_NAME_LENGTH,
         })
     } else {
-        match name.find(invalid_char) {
+        match body.find(invalid_char) {
             None => Ok(()),
             Some(bytepos_invalid_char_start) => {
                 let c = name[bytepos_invalid_char_start..].chars().next().unwrap();
@@ -93,4 +100,14 @@ pub fn validate_name(name: &str) -> Result<(), ContractError> {
             }
         }
     }
+}
+pub fn format_name(name:String) ->String{
+    let domain_route = format!("{}{}", name, String::from(SUFFIX));
+    domain_route
+}
+pub fn get_name_body(name:String) ->String{
+    let length = name.len() as u64;
+    let suffix_index=length as usize-SUFFIX.len();
+    let body= &name[0..suffix_index];
+    String::from(body)
 }

@@ -7,7 +7,9 @@ use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, UpdateMetadataMsg, 
     Subdomain,
 };
-
+use crate::read_utils::{
+    get_name_body
+};
 use crate::error::ContractError;
 use crate::msg::{
     MetaDataUpdateMsg,
@@ -20,7 +22,6 @@ use crate::read_utils::{
 };
 
 pub static DENOM: &str = "uconst";
-
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
     cw721: &Addr,
@@ -60,14 +61,15 @@ pub fn mint_handler(
     cw721: &Addr,
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
-    let subdomains = if name.clone().contains(".") { None } else { Some(vec![]) };
-    let accounts = if name.clone().contains(".") { None } else { Some(vec![]) };
-    let websites = if name.clone().contains(".") { None } else { Some(vec![]) };
-    let description = if name.clone().contains(".") { [name, " archid  subdomain"].concat() } else { [name, " archid  domain"].concat() };
+    let body=get_name_body(name.to_string());
+    let subdomains = if body.clone().contains(".") { None } else { Some(vec![]) };
+    let accounts = if body.clone().contains(".") { None } else { Some(vec![]) };
+    let websites = if body.clone().contains(".") { None } else { Some(vec![]) };
+    let description = if body.clone().contains(".") { [name, " archid  subdomain"].concat() } else { [name, " archid  domain"].concat() };
 
     let mint_extension = Some(Metadata {
         description: Some(description),
-        name: Some(name.clone()),
+        name: Some(body.clone()),
         image: None,
         expiry: Some(expiration),
         domain: Some(name.clone()),
@@ -75,6 +77,7 @@ pub fn mint_handler(
         accounts: accounts,
         websites: websites,
     });
+    
     let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
         token_id: name.to_string(),
         owner: creator.to_string(),

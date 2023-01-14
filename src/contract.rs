@@ -12,7 +12,8 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg,};
 use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
 use crate::read_utils::{
-    query_name_owner, query_resolver, query_resolver_expiration, validate_name, query_current_metadata
+    query_name_owner, query_resolver, query_resolver_expiration, validate_name, query_current_metadata,
+    format_name
 };
 use crate::write_utils::{
     add_subdomain_metadata, mint_handler, burn_handler, user_metadata_update_handler, remove_subdomain,
@@ -47,11 +48,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Register { name } => execute_register(deps, env, info, name),
-        ExecuteMsg::RenewRegistration { name } => renew_registration(deps, env, info, name),
+        ExecuteMsg::Register { name } => execute_register(deps, env, info, format_name(name)),
+        ExecuteMsg::RenewRegistration { name } => renew_registration(deps, env, info,  format_name(name)),
         ExecuteMsg::UpdateResolver { name, new_resolver } => {
-            update_resolver(info, deps, env, name, new_resolver)
-        }
+            update_resolver(info, deps, env,  format_name(name), new_resolver)
+        },
         ExecuteMsg::RegisterSubDomain {
             domain,
             subdomain,
@@ -63,7 +64,7 @@ pub fn execute(
             info,
             deps,
             env,
-            domain,
+            format_name(domain),
             subdomain,
             new_resolver,
             new_owner,
@@ -73,12 +74,12 @@ pub fn execute(
         ExecuteMsg::UpdataUserDomainData {
             name,
             metadata_update,
-        } => user_metadata_update_handler(info, deps, name, metadata_update),
+        } => user_metadata_update_handler(info, deps,  format_name(name), metadata_update),
         ExecuteMsg::UpdateConfig { update_config } => {
             _update_config(deps, env, info, update_config)
         }
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
-        ExecuteMsg::RemoveSubDomain{ domain,subdomain}=>remove_subdomain(info, deps,env, domain,subdomain)
+        ExecuteMsg::RemoveSubDomain{ domain,subdomain}=>remove_subdomain(info, deps,env, format_name(domain),subdomain)
     }
 }
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -193,6 +194,7 @@ fn set_subdomain(
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
     let domain_route:String = format!("{}.{}", subdomain, domain);
+    println!("{}",domain_route);
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
