@@ -1,25 +1,24 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Timestamp, Uint128,
+    entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
+    StdError, StdResult, Timestamp, Uint128,
 };
 
-use archid_token::{
-    Metadata,
-};
-use cw_utils::{must_pay};
-use std::convert::TryFrom;
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg,};
-use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{
-    query_name_owner, query_resolver, query_resolver_expiration, validate_name, query_current_metadata
+    format_name, query_current_metadata, query_name_owner, query_resolver,
+    query_resolver_expiration, validate_name,
 };
+use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
 use crate::write_utils::{
-    add_subdomain_metadata, mint_handler, burn_handler, user_metadata_update_handler, remove_subdomain,
-    send_tokens, send_data_update, DENOM,
+    add_subdomain_metadata, burn_handler, mint_handler, remove_subdomain, send_data_update,
+    send_tokens, user_metadata_update_handler, DENOM,
 };
+use archid_token::Metadata;
+use cw_utils::must_pay;
+use std::convert::TryFrom;
 
-const MAX_BASE_INTERVAL:u64= 3;
+const MAX_BASE_INTERVAL: u64 = 3;
 pub type NameExtension = Option<Metadata>;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -47,10 +46,12 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Register { name } => execute_register(deps, env, info, name),
-        ExecuteMsg::RenewRegistration { name } => renew_registration(deps, env, info, name),
+        ExecuteMsg::Register { name } => execute_register(deps, env, info, format_name(name)),
+        ExecuteMsg::RenewRegistration { name } => {
+            renew_registration(deps, env, info, format_name(name))
+        }
         ExecuteMsg::UpdateResolver { name, new_resolver } => {
-            update_resolver(info, deps, env, name, new_resolver)
+            update_resolver(info, deps, env, format_name(name), new_resolver)
         }
         ExecuteMsg::RegisterSubDomain {
             domain,
@@ -63,7 +64,7 @@ pub fn execute(
             info,
             deps,
             env,
-            domain,
+            format_name(domain),
             subdomain,
             new_resolver,
             new_owner,
@@ -73,12 +74,14 @@ pub fn execute(
         ExecuteMsg::UpdataUserDomainData {
             name,
             metadata_update,
-        } => user_metadata_update_handler(info, deps, name, metadata_update),
+        } => user_metadata_update_handler(info, deps, format_name(name), metadata_update),
         ExecuteMsg::UpdateConfig { update_config } => {
             _update_config(deps, env, info, update_config)
         }
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
-        ExecuteMsg::RemoveSubDomain{ domain,subdomain}=>remove_subdomain(info, deps,env, domain,subdomain)
+        ExecuteMsg::RemoveSubDomain { domain, subdomain } => {
+            remove_subdomain(info, deps, env, format_name(domain), subdomain)
+        }
     }
 }
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -102,13 +105,14 @@ pub fn execute_register(
     let c: Config = config_read(deps.storage).load()?;
     let res = must_pay(&info, &String::from(DENOM))?;
     let mut messages = Vec::new();
-    let mut registration:u64= u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
+    let mut registration: u64 =
+        u64::try_from(((res.checked_div(c.base_cost)).unwrap()).u128()).unwrap();
     if registration < 1 {
         return Err(ContractError::InvalidPayment { amount: res });
     }
 
-    if registration>MAX_BASE_INTERVAL{
-        registration=MAX_BASE_INTERVAL;
+    if registration > MAX_BASE_INTERVAL {
+        registration = MAX_BASE_INTERVAL;
     }
     if (curr).is_some() {
         if !curr.unwrap().is_expired(&_env.block) {
@@ -122,7 +126,8 @@ pub fn execute_register(
     //let _expiration= c.base_expiration + _env.block.time.seconds();
     let record = NameRecord {
         owner: info.sender.clone(),
-        expiration: c.base_expiration.checked_mul(registration).unwrap()+ _env.block.time.seconds(),
+        expiration: c.base_expiration.checked_mul(registration).unwrap()
+            + _env.block.time.seconds(),
     };
     let mint_resp = mint_handler(
         &name,
@@ -176,7 +181,6 @@ when minted only nft owner can set subdomain resolver until expiration
 nft cannot be reminted unless burned by owner before expiration
 **/
 
-
 fn set_subdomain(
     info: MessageInfo,
     deps: DepsMut,
@@ -192,7 +196,8 @@ fn set_subdomain(
     validate_name(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
-    let domain_route:String = format!("{}.{}", subdomain, domain);
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    //println!("{}",domain_route);
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
@@ -204,18 +209,18 @@ fn set_subdomain(
     };
 
     if !resolver(deps.storage).may_load(&key).unwrap().is_some() {
-       let metadata_msg=add_subdomain_metadata(
+        let metadata_msg = add_subdomain_metadata(
             &deps,
             &c.cw721,
             domain.clone(),
             subdomain.clone(),
             new_resolver.clone(),
             _expiration.clone(),
-            mint,            
+            mint,
         )?;
         messages.push(metadata_msg);
-    }   
-    if has_minted {        
+    }
+    if has_minted {
         if !((resolver(deps.storage).may_load(key)?)
             .unwrap()
             .is_expired(&env.block))
@@ -230,11 +235,10 @@ fn set_subdomain(
         return Err(ContractError::Unauthorized {});
     }
     // revert if minted and not expired
-    
+
     if env.block.time >= Timestamp::from_seconds(expiration) {
         return Err(ContractError::InvalidInput {});
     }
-    
 
     let record = NameRecord {
         owner: new_resolver.clone(),
@@ -320,6 +324,3 @@ pub fn withdraw_fees(
     let resp = send_tokens(&c.wallet, amount)?;
     Ok(Response::new().add_message(resp))
 }
-
-
-
