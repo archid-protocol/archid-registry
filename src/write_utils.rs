@@ -163,11 +163,6 @@ pub fn remove_subdomain(
         return Err(ContractError::Unauthorized {});
     }
     if has_minted {
-        // XXX (drew): To be reviewed
-        // The below code makes it so top level domain owners
-        // Cannot remove their subdomains unless they're expired
-        // which is problematic, since subdomain resolver address
-        // should be a contract in most cases.
         if !((resolver(deps.storage).may_load(key)?)
             .unwrap()
             .is_expired(&env.block))
