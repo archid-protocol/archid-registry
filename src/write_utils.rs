@@ -105,7 +105,7 @@ pub fn mint_handler(
 }
 
 pub fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
-    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::BurnAdminOnly {
+    let burn_msg: Cw721ExecuteMsg = Cw721ExecuteMsg::Burn {
         token_id: name.to_string(),
     };
     let resp: CosmosMsg = WasmMsg::Execute {
