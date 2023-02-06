@@ -78,10 +78,7 @@ pub fn validate_name(name: &str) -> Result<(), ContractError> {
     let length = name.len() as u64;
     let suffix_index = length as usize - SUFFIX.len();
     let body = &name[0..suffix_index];
-    println!("{:?}", &name);
-    println!("{:?}", &body);
-    let domain = &name[suffix_index..length as usize];
-    println!("{:?}", &domain);
+
     if (body.len() as u64) < MIN_NAME_LENGTH {
         Err(ContractError::NameTooShort {
             length,
@@ -94,6 +91,29 @@ pub fn validate_name(name: &str) -> Result<(), ContractError> {
         })
     } else {
         match body.find(invalid_char) {
+            None => Ok(()),
+            Some(bytepos_invalid_char_start) => {
+                let c = name[bytepos_invalid_char_start..].chars().next().unwrap();
+                Err(ContractError::InvalidCharacter { c })
+            }
+        }
+    }
+}
+pub fn validate_subdomain(name: &str) -> Result<(), ContractError> {
+    let length = name.len() as u64;
+
+    if (name.len() as u64) < MIN_NAME_LENGTH {
+        Err(ContractError::NameTooShort {
+            length,
+            min_length: MIN_NAME_LENGTH,
+        })
+    } else if (name.len() as u64) > MAX_NAME_LENGTH {
+        Err(ContractError::NameTooLong {
+            length,
+            max_length: MAX_NAME_LENGTH,
+        })
+    } else {
+        match name.find(invalid_char) {
             None => Ok(()),
             Some(bytepos_invalid_char_start) => {
                 let c = name[bytepos_invalid_char_start..].chars().next().unwrap();
