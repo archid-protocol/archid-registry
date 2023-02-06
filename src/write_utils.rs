@@ -56,25 +56,25 @@ pub fn mint_handler(
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let body = get_name_body(name.to_string());
-    let subdomains = if body.clone().contains(".") {
+    let subdomains = if body.clone().contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let accounts = if body.clone().contains(".") {
+    let accounts = if body.clone().contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let websites = if body.clone().contains(".") {
+    let websites = if body.clone().contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let description = if body.clone().contains(".") {
-        [name, " archid  subdomain"].concat()
+    let description = if body.clone().contains('.') {
+        [name, " archid subdomain"].concat()
     } else {
-        [name, " archid  domain"].concat()
+        [name, " archid domain"].concat()
     };
 
     let mint_extension = Some(Metadata {
@@ -83,9 +83,9 @@ pub fn mint_handler(
         image: None,
         expiry: Some(expiration),
         domain: Some(name.clone()),
-        subdomains: subdomains,
-        accounts: accounts,
-        websites: websites,
+        subdomains,
+        accounts,
+        websites,
     });
 
     let mint_msg: archid_token::ExecuteMsg = Cw721ExecuteMsg::Mint(MintMsg {
