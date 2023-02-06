@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{
     format_name, query_current_metadata, query_name_owner, query_resolver,
-    query_resolver_expiration, validate_name,
+    query_resolver_expiration, validate_name, validate_subdomain,
 };
 use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
 use crate::write_utils::{
@@ -193,7 +193,7 @@ fn set_subdomain(
     expiration: u64,
 ) -> Result<Response, ContractError> {
     validate_name(&domain)?;
-    validate_name(&subdomain)?;
+    validate_subdomain(&subdomain)?;
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
     let domain_route: String = format!("{}.{}", subdomain, domain);
