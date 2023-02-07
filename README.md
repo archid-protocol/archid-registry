@@ -4,11 +4,11 @@
 
 
 **Register name**:
-```
+```bash
 archway tx --args '{ "register": {"name": "alex"}}'
 ```
 
 **Resolve record**:
-```
+```bash
 archwayd query wasm contract-state smart archway1q5gt0quuj07yth7cnlp35p49pg22p2hyswdhpl22a2j8c0z74y0qv6yfer '{ "resolve_record": {"name": "alex" } }' --node https://rpc.constantine-1.archway.tech:443
 ```
