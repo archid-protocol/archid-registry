@@ -72,9 +72,9 @@ pub fn mint_handler(
         Some(vec![])
     };
     let description = if body.clone().contains('.') {
-        [name, " archid subdomain"].concat()
+        [name, " subdomain"].concat()
     } else {
-        [name, " archid domain"].concat()
+        [name, " domain"].concat()
     };
 
     let mint_extension = Some(Metadata {
