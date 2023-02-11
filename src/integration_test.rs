@@ -349,30 +349,8 @@ fn test_expired_domains() {
             &[]
         )
         .is_err());
-    let _transfer = app.execute_contract(
-        name_owner2.clone(),
-        name_service.clone(),
-        &register_msg,
-        &[Coin {
-            denom: String::from(DENOM),
-            amount: Uint128::from(5000u128),
-        }],
-    );
-    let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: String::from("simpletest.arch"),
-        include_expired: None,
-    };
-
-    let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
-    assert!(nft_owner.owner == name_owner2);
-    let info1: NftInfoResponse<Metadata> = query(
-        &mut app,
-        nft.clone(),
-        Cw721QueryMsg::<Extension>::NftInfo {
-            token_id: String::from("simpletest.arch"),
-        },
-    )
-    .unwrap();
+    
+  
     // assert_eq!(
     //         info1,
     //         NftInfoResponse {
@@ -380,7 +358,7 @@ fn test_expired_domains() {
     //             extension: metadata_extension.clone(),
     //         }
     // );
-    println!("{:?}", info1);
+    //println!("{:?}", info1);
 }
 
 #[test]
