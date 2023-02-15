@@ -156,8 +156,8 @@ fn basic_domain_test() {
     assert!(app
         .execute_contract(name_owner.clone(), name_service.clone(), &register_msg, &[])
         .is_err());
-    println! {"first register"};
-    let res = app.execute_contract(
+
+    let _res = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &register_msg,
@@ -178,7 +178,7 @@ fn basic_domain_test() {
         )
         .is_err());
 
-    println!("{:?}", res);
+    // println!("{:?}", res);
     let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
         token_id: String::from("simpletest.arch"),
         include_expired: None,
@@ -187,15 +187,15 @@ fn basic_domain_test() {
         token_id: String::from("lolz.arch"),
         include_expired: None,
     };
-    let total: NumTokensResponse = query(
+    let _total: NumTokensResponse = query(
         &mut app,
         nft.clone(),
         Cw721QueryMsg::<Extension>::NumTokens {},
     )
     .unwrap();
-    println!("{}", total.count);
+    // println!("{}", total.count);
 
-    let resolve: ResolveRecordResponse = query(
+    let _resolve: ResolveRecordResponse = query(
         &mut app,
         name_service.clone(),
         QueryMsg::ResolveRecord {
@@ -203,10 +203,10 @@ fn basic_domain_test() {
         },
     )
     .unwrap();
-    let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
+    let _nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
 
-    println!("{:?}", resolve.address.unwrap());
-    println!("{:?}", nft_owner);
+    // println!("{:?}", resolve.address.unwrap());
+    // println!("{:?}", nft_owner);
 
     let expiration: RecordExpirationResponse = query(
         &mut app,
@@ -216,53 +216,112 @@ fn basic_domain_test() {
         },
     )
     .unwrap();
-    println!("{:?}", expiration);
+    // println!("{:?}", expiration);
     let subdomain_msg = ExecuteMsg::RegisterSubDomain {
         domain: String::from("simpletest"),
-        subdomain: String::from("subdomain"),
-        new_resolver: mock.clone(),
-        new_owner: mock.clone(),
-        mint: false,
-        expiration: expiration.expiration,
-    };
-    let res2 = app.execute_contract(
-        name_owner.clone(),
-        name_service.clone(),
-        &subdomain_msg,
-        &[],
-    );
-    println!("{:?}", res2);
-    let subresolve: ResolveRecordResponse = query(
-        &mut app,
-        name_service.clone(),
-        QueryMsg::ResolveRecord {
-            name: String::from("subdomain.simpletest.arch"),
-        },
-    )
-    .unwrap();
-    println!("{:?}", subresolve);
-    let subdomain_msg2 = ExecuteMsg::RegisterSubDomain {
-        domain: String::from("simpletest"),
-        subdomain: String::from("nft_subdomain"),
+        subdomain: String::from("dapp"),
         new_resolver: mock.clone(),
         new_owner: mock.clone(),
         mint: true,
         expiration: expiration.expiration,
     };
-    let res3 = app.execute_contract(
+    let _res2 = app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &subdomain_msg,
+        &[],
+    );
+    // println!("First subdomain execute {:?}", res2);
+    let _subresolve: ResolveRecordResponse = query(
+        &mut app,
+        name_service.clone(),
+        QueryMsg::ResolveRecord {
+            name: String::from("dapp.simpletest.arch"),
+        },
+    )
+    .unwrap();
+    // println!("First subdomain resolver query {:?}", subresolve);
+
+    let subdomain_cw721: NftInfoResponse<Extension> = query(
+        &mut app,
+        nft.clone(),
+        Cw721QueryMsg::<Extension>::NftInfo {
+            token_id: String::from("dapp.simpletest.arch"),
+        },
+    )
+    .unwrap();
+
+    let metadata_extension: Extension = Some(Metadata { 
+		name: Some("dapp.simpletest".into()),
+		description: Some("dapp.simpletest.arch subdomain".into()),
+		image: None,
+		expiry: Some(expiration.expiration),
+		domain: Some("dapp.simpletest.arch".into()),
+		subdomains: None,
+		accounts: None,
+		websites: None,
+	});
+    assert_eq!(
+        subdomain_cw721,
+        NftInfoResponse::<Extension> {
+            token_uri: None,
+            extension: metadata_extension,
+        }
+    );
+    // println!("First subdomain NFT metadata query {:?}", subdomain_cw721);
+
+    let subdomain_msg2 = ExecuteMsg::RegisterSubDomain {
+        domain: String::from("simpletest"),
+        subdomain: String::from("subdomain2"),
+        new_resolver: mock.clone(),
+        new_owner: mock.clone(),
+        mint: true,
+        expiration: expiration.expiration,
+    };
+    let _res3 = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg2,
         &[],
     );
-    println!("{:?}", res3);
+    // println!("Second subdomain execute {:?}", res3);
+
+    let subdomain2_cw721: NftInfoResponse<Extension> = query(
+        &mut app,
+        nft.clone(),
+        Cw721QueryMsg::<Extension>::NftInfo {
+            token_id: String::from("subdomain2.simpletest.arch"),
+        },
+    )
+    .unwrap();
+    // println!("Second subdomain metadata query {:?}", subdomain2_cw721);
+
+    let metadata_extension2: Extension = Some(Metadata {
+		name: Some("subdomain2.simpletest".into()),
+		description: Some("subdomain2.simpletest.arch subdomain".into()),
+		image: None,
+		expiry: Some(expiration.expiration),
+		domain: Some("subdomain2.simpletest.arch".into()),
+		subdomains: None, 
+		accounts: None, 
+		websites: None 
+	});
+    assert_eq!(
+        subdomain2_cw721,
+        NftInfoResponse::<Extension> {
+            token_uri: None,
+            extension: metadata_extension2,
+        }
+    );
+    
     let total2: NumTokensResponse = query(
         &mut app,
         nft.clone(),
         Cw721QueryMsg::<Extension>::NumTokens {},
     )
     .unwrap();
-    println!("{}", total2.count);
+    assert_eq!(total2.count, 3);
+    // dbg!(total2.count);
 }
 
 #[test]
@@ -332,7 +391,9 @@ fn test_expired_domains() {
     )
     .unwrap();
     assert!(resolve.address == None);
+    
     current_time = get_block_time(&mut app);
+    
     let subdomain_msg = ExecuteMsg::RegisterSubDomain {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
@@ -359,6 +420,51 @@ fn test_expired_domains() {
     //         }
     // );
     //println!("{:?}", info1);
+    let _transfer = app.execute_contract(
+        name_owner2.clone(),
+        name_service.clone(),
+        &register_msg,
+        &[Coin {
+            denom: String::from(DENOM),
+            amount: Uint128::from(5000u128),
+        }],
+    );
+    let owner_query: Cw721QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
+        token_id: String::from("simpletest.arch"),
+        include_expired: None,
+    };
+
+    let nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
+    assert!(nft_owner.owner == name_owner2);
+    
+    let info1: NftInfoResponse<Extension> = query(
+        &mut app,
+        nft.clone(),
+        Cw721QueryMsg::<Extension>::NftInfo {
+            token_id: String::from("simpletest.arch"),
+        },
+    )
+    .unwrap();
+
+    let expiry_resp = info1.clone().extension.as_ref().unwrap().expiry;
+    let metadata_extension: Extension = Some(Metadata {
+        name: Some("simpletest".into()), 
+        description: Some("simpletest.arch domain".into()), 
+        image: None, 
+        expiry: expiry_resp,
+        domain: Some("simpletest.arch".into()),
+        subdomains: Some(vec![]), 
+        accounts: Some(vec![]), 
+        websites: Some(vec![])
+    });
+    assert_eq!(
+        info1,
+        NftInfoResponse::<Extension> {
+            token_uri: None,
+            extension: metadata_extension,
+        }
+    );
+    // println!("simpletest.arch metadata {:?}", info1);
 }
 
 #[test]
@@ -421,25 +527,19 @@ fn test_subdomain_rules() {
     let mut current_time = get_block_time(&mut app);
     let subdomain_msg = ExecuteMsg::RegisterSubDomain {
         domain: String::from("simpletest"),
-        subdomain: String::from("nft_subdomain"),
+        subdomain: String::from("subdomain"),
         new_resolver: name_owner2.clone(),
         new_owner: mock.clone(),
         mint: true,
         expiration: current_time + 43200,
     };
-    // let subdomain_msg2 = ExecuteMsg::RegisterSubDomain {
-    //     domain: String::from("simpletest"),
-    //     subdomain: String::from("nft_subdomain"),
-    //     new_resolver: name_owner.clone(),
-    //     mint: true,
-    //     expiration: current_time + 43200,
-    // };
     let _res3 = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg,
         &[],
     );
+    // println!("{:?}", res3);
     //app.execute_contract(name_owner.clone(), name_service.clone(), &subdomain_msg, &[]);
     assert!(app
         .execute_contract(
@@ -450,7 +550,7 @@ fn test_subdomain_rules() {
         )
         .is_err());
     let update_resolver_msg = ExecuteMsg::UpdateResolver {
-        name: String::from("nft_subdomain.simpletest"),
+        name: String::from("subdomain.simpletest"),
         new_resolver: domain_owner,
     };
     assert!(app

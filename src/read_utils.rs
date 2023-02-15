@@ -78,7 +78,6 @@ pub fn validate_name(name: &str) -> Result<(), ContractError> {
     let length = name.len() as u64;
     let suffix_index = length as usize - SUFFIX.len();
     let body = &name[0..suffix_index];
-
     if (body.len() as u64) < MIN_NAME_LENGTH {
         Err(ContractError::NameTooShort {
             length,
