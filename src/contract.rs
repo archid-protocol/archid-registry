@@ -123,17 +123,18 @@ pub fn execute_register(
             //&response.add_message(burn_msg);
         }
     }
-    //let _expiration= c.base_expiration + _env.block.time.seconds();
+    let expiration =
+    c.base_expiration.checked_mul(registration).unwrap() + _env.block.time.seconds();
+    
     let record = NameRecord {
         owner: info.sender.clone(),
-        expiration: c.base_expiration.checked_mul(registration).unwrap()
-            + _env.block.time.seconds(),
+        expiration:expiration
     };
     let mint_resp = mint_handler(
         &name,
         &info.sender,
         &c.cw721,
-        c.base_expiration + _env.block.time.seconds(),
+        expiration,
     )?;
     messages.push(mint_resp);
     resolver(deps.storage).save(key, &record)?;
