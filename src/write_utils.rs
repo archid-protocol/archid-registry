@@ -22,7 +22,7 @@ pub fn add_subdomain_metadata(
     expiry: u64,
     minted: bool,
 ) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let mut current_metadata: Metadata = query_current_metadata(&name, cw721, deps).unwrap();
     let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
     subdomains.push(Subdomain {
         name: Some(subdomain),
@@ -31,7 +31,7 @@ pub fn add_subdomain_metadata(
         expiry: Some(expiry),
     });
     current_metadata.subdomains = Some((*subdomains).to_vec());
-    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
 pub fn remove_subdomain_metadata(
@@ -40,12 +40,12 @@ pub fn remove_subdomain_metadata(
     name: String,
     subdomain: String,
 ) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let mut current_metadata: Metadata = query_current_metadata(&name, cw721, deps).unwrap();
     let mut subdomains = current_metadata.subdomains.as_ref().unwrap().clone();
 
     subdomains.retain(|item| item.name.as_ref().unwrap().as_bytes() != subdomain.as_bytes());
     current_metadata.subdomains = Some((*subdomains).to_vec());
-    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
 
@@ -56,22 +56,22 @@ pub fn mint_handler(
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let body = get_name_body(name.to_string());
-    let subdomains = if body.clone().contains('.') {
+    let subdomains = if body.contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let accounts = if body.clone().contains('.') {
+    let accounts = if body.contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let websites = if body.clone().contains('.') {
+    let websites = if body.contains('.') {
         None
     } else {
         Some(vec![])
     };
-    let description = if body.clone().contains('.') {
+    let description = if body.contains('.') {
         [name, " subdomain"].concat()
     } else {
         [name, " domain"].concat()
@@ -79,7 +79,7 @@ pub fn mint_handler(
 
     let mint_extension = Some(Metadata {
         description: Some(description),
-        name: Some(body.clone()),
+        name: Some(body),
         image: None,
         expiry: Some(expiration),
         domain: Some(name.clone()),
@@ -138,8 +138,8 @@ pub fn user_metadata_update_handler(
         expiry: current_metadata.expiry,
         domain: current_metadata.domain,
         subdomains: current_metadata.subdomains,
-        accounts: update.clone().accounts,
-        websites: update.clone().websites,
+        accounts: update.accounts,
+        websites: update.websites,
     };
     let resp = send_data_update(&name, &cw721, new_metadata);
     Ok(Response::new().add_message(resp.unwrap()))
@@ -158,23 +158,22 @@ pub fn remove_subdomain(
     let mut messages = Vec::new();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-    
+
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
     if has_minted {
         let subdomain_owner = query_name_owner(&domain_route, &c.cw721, &deps).unwrap();
-        // if owner of the minted subdomain is not owner of the top level domain   
+        // if owner of the minted subdomain is not owner of the top level domain
         // and subdomain is not expired
         if !((resolver(deps.storage).may_load(key)?)
             .unwrap()
-            .is_expired(&env.block)) && subdomain_owner.owner!= info.sender 
+            .is_expired(&env.block))
+            && subdomain_owner.owner != info.sender
         {
             return Err(ContractError::NameTaken { name: domain_route });
         }
-        messages.push(
-            remove_subdomain_metadata(&deps, &c.cw721, domain.clone(), subdomain.clone()).unwrap(),
-        );
+        messages.push(remove_subdomain_metadata(&deps, &c.cw721, domain, subdomain).unwrap());
         messages.push(burn_handler(&domain_route, &c.cw721)?);
     }
     resolver(deps.storage).remove(key);
@@ -184,11 +183,11 @@ pub fn remove_subdomain(
 pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
     let msg = BankMsg::Send {
         to_address: to.into(),
-        amount: (&[Coin {
+        amount: ([Coin {
             denom: String::from(DENOM),
-            amount: amount,
+            amount,
         }])
-            .to_vec(),
+        .to_vec(),
     };
     Ok(msg.into())
 }

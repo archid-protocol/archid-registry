@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Uint128};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admin: Addr,
     pub wallet: Addr,
@@ -48,7 +48,7 @@ pub enum ExecuteMsg {
         subdomain: String,
     },
     UpdateConfig {
-        update_config: Config,
+        config: Config,
     },
     UpdataUserDomainData {
         name: String,
@@ -56,7 +56,7 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     ResolveRecord { name: String },
@@ -64,12 +64,12 @@ pub enum QueryMsg {
     Config {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ResolveRecordResponse {
     pub address: Option<String>,
     pub expiration: u64,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct RecordExpirationResponse {
     pub expiration: u64,
 }

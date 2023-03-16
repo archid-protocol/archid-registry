@@ -13,12 +13,12 @@ const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
 const SUFFIX: &str = ".arch";
 pub fn query_name_owner(
-    id: &String,
+    id: &str,
     cw721: &Addr,
     deps: &DepsMut,
 ) -> Result<OwnerOfResponse, StdError> {
     let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::OwnerOf {
-        token_id: id.clone(),
+        token_id: id.to_owned(),
         include_expired: None,
     };
     let req = QueryRequest::Wasm(WasmQuery::Smart {
@@ -54,12 +54,12 @@ pub fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResu
 }
 
 pub fn query_current_metadata(
-    id: &String,
+    id: &str,
     cw721: &Addr,
     deps: &DepsMut,
 ) -> Result<Metadata, StdError> {
     let query_msg: archid_token::QueryMsg<Extension> = Cw721QueryMsg::NftInfo {
-        token_id: id.clone(),
+        token_id: id.to_owned(),
     };
     let req = QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: cw721.to_string(),

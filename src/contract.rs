@@ -75,9 +75,7 @@ pub fn execute(
             name,
             metadata_update,
         } => user_metadata_update_handler(info, deps, format_name(name), metadata_update),
-        ExecuteMsg::UpdateConfig { update_config } => {
-            _update_config(deps, env, info, update_config)
-        }
+        ExecuteMsg::UpdateConfig { config } => update_config(deps, env, info, config),
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
         ExecuteMsg::RemoveSubDomain { domain, subdomain } => {
             remove_subdomain(info, deps, env, format_name(domain), subdomain)
@@ -114,28 +112,22 @@ pub fn execute_register(
     if registration > MAX_BASE_INTERVAL {
         registration = MAX_BASE_INTERVAL;
     }
-    if (curr).is_some() {
-        if !curr.unwrap().is_expired(&_env.block) {
+    if let Some(curr_value) = curr {
+        if !curr_value.is_expired(&_env.block) {
             return Err(ContractError::NameTaken { name });
         } else {
             let burn_msg = burn_handler(&name, &c.cw721)?;
             messages.push(burn_msg);
-            //&response.add_message(burn_msg);
         }
     }
     let expiration =
-    c.base_expiration.checked_mul(registration).unwrap() + _env.block.time.seconds();
-    
+        c.base_expiration.checked_mul(registration).unwrap() + _env.block.time.seconds();
+
     let record = NameRecord {
         owner: info.sender.clone(),
-        expiration:expiration
-    };
-    let mint_resp = mint_handler(
-        &name,
-        &info.sender,
-        &c.cw721,
         expiration,
-    )?;
+    };
+    let mint_resp = mint_handler(&name, &info.sender, &c.cw721, expiration)?;
     messages.push(mint_resp);
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::new().add_messages(messages))
@@ -198,37 +190,37 @@ fn set_subdomain(
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
     let domain_route: String = format!("{}.{}", subdomain, domain);
-    //println!("{}",domain_route);
+
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
 
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-    let _expiration = match &expiration > &domain_config.expiration {
+    let _expiration = match expiration > domain_config.expiration {
         true => &domain_config.expiration,
         false => &expiration,
     };
 
-    if !resolver(deps.storage).may_load(&key).unwrap().is_some() {
+    if resolver(deps.storage).may_load(key).unwrap().is_none() {
         let metadata_msg = add_subdomain_metadata(
             &deps,
             &c.cw721,
             domain.clone(),
-            subdomain.clone(),
+            subdomain,
             new_resolver.clone(),
-            _expiration.clone(),
+            *_expiration,
             mint,
         )?;
         messages.push(metadata_msg);
     }
-    if has_minted {
-        if !((resolver(deps.storage).may_load(key)?)
+    if has_minted
+        && !((resolver(deps.storage).may_load(key)?)
             .unwrap()
             .is_expired(&env.block))
-        {
-            return Err(ContractError::NameTaken { name: domain_route });
-        }
+    {
+        return Err(ContractError::NameTaken { name: domain_route });
     }
+
     if domain_config.is_expired(&env.block) {
         return Err(ContractError::NameOwnershipExpired { name: domain });
     }
@@ -242,11 +234,11 @@ fn set_subdomain(
     }
 
     let record = NameRecord {
-        owner: new_resolver.clone(),
+        owner: new_resolver,
         expiration: *_expiration,
     };
     resolver(deps.storage).save(key, &record)?;
-    if mint == true {
+    if mint {
         if !has_minted {
             mint_status(deps.storage).save(key, &true)?;
         } else {
@@ -267,13 +259,13 @@ fn update_metadata_expiry(
     name: String,
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
+    let mut current_metadata: Metadata = query_current_metadata(&name, cw721, &deps).unwrap();
     current_metadata.expiry = Some(expiration);
-    let resp = send_data_update(&name, &cw721, current_metadata)?;
+    let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
 // add reregister function so owners can extend their
-pub fn _update_config(
+pub fn update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,

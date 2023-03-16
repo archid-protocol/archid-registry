@@ -11,7 +11,7 @@ pub static NAME_RESOLVER_KEY: &[u8] = b"nameresolver";
 pub static SUBDOMAIN_MINTED: &[u8] = b"subdomain_minted";
 pub static CONFIG_KEY: &[u8] = b"config";
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
     pub admin: Addr,
     pub wallet: Addr,
@@ -31,7 +31,7 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<Config> {
     add expiration
     and top level domain?
 **/
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct NameRecord {
     pub owner: Addr,
     pub expiration: u64,
