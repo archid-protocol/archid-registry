@@ -69,7 +69,7 @@ pub fn query_current_metadata(
     Ok(res.extension)
 }
 fn invalid_char(c: char) -> bool {
-    let is_valid = c.is_digit(10) || c.is_ascii_lowercase() || (c == '-' || c == '_');
+    let is_valid = c.is_ascii_digit() || c.is_ascii_lowercase() || (c == '-' || c == '_');
     !is_valid
 }
 /// validate_name returns an error if the name is invalid

@@ -173,7 +173,7 @@ expiration<= top level domain expiration
 when minted only nft owner can set subdomain resolver until expiration
 nft cannot be reminted unless burned by owner before expiration
 **/
-
+#[allow(clippy::too_many_arguments)]
 fn set_subdomain(
     info: MessageInfo,
     deps: DepsMut,
