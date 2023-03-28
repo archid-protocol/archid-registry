@@ -161,10 +161,10 @@
         "update_config": {
           "type": "object",
           "required": [
-            "update_config"
+            "config"
           ],
           "properties": {
-            "update_config": {
+            "config": {
               "$ref": "#/definitions/Config"
             }
           }
