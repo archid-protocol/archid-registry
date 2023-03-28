@@ -19,6 +19,7 @@ pub fn add_subdomain_metadata(
     name: String,
     subdomain: String,
     resolver: Addr,
+    created: u64,
     expiry: u64,
     minted: bool,
 ) -> StdResult<CosmosMsg> {
@@ -28,6 +29,7 @@ pub fn add_subdomain_metadata(
         name: Some(subdomain),
         resolver: Some(resolver),
         minted: Some(minted),
+        created: Some(created),
         expiry: Some(expiry),
     });
     current_metadata.subdomains = Some((*subdomains).to_vec());
@@ -53,6 +55,7 @@ pub fn mint_handler(
     name: &String,
     creator: &Addr,
     cw721: &Addr,
+    created: u64,
     expiration: u64,
 ) -> StdResult<CosmosMsg> {
     let body = get_name_body(name.to_string());
@@ -81,6 +84,7 @@ pub fn mint_handler(
         description: Some(description),
         name: Some(body),
         image: None,
+        created: Some(created),
         expiry: Some(expiration),
         domain: Some(name.clone()),
         subdomains,
@@ -135,6 +139,7 @@ pub fn user_metadata_update_handler(
         description: update.clone().description,
         name: Some(name.clone()),
         image: update.clone().image,
+        created: current_metadata.created,
         expiry: current_metadata.expiry,
         domain: current_metadata.domain,
         subdomains: current_metadata.subdomains,

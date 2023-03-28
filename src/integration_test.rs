@@ -254,6 +254,7 @@ fn basic_domain_test() {
         name: Some("dapp.simpletest".into()),
         description: Some("dapp.simpletest.arch subdomain".into()),
         image: None,
+        created: Some(expiration.created),
         expiry: Some(expiration.expiration),
         domain: Some("dapp.simpletest.arch".into()),
         subdomains: None,
@@ -299,6 +300,7 @@ fn basic_domain_test() {
         name: Some("subdomain2.simpletest".into()),
         description: Some("subdomain2.simpletest.arch subdomain".into()),
         image: None,
+        created: Some(expiration.created),
         expiry: Some(expiration.expiration),
         domain: Some("subdomain2.simpletest.arch".into()),
         subdomains: None,
@@ -444,12 +446,12 @@ fn test_expired_domains() {
     )
     .unwrap();
 
-    let expiry_resp = info1.clone().extension.as_ref().unwrap().expiry;
     let metadata_extension: Extension = Some(Metadata {
         name: Some("simpletest".into()),
         description: Some("simpletest.arch domain".into()),
         image: None,
-        expiry: expiry_resp,
+        created: info1.clone().extension.as_ref().unwrap().created,
+        expiry: info1.clone().extension.as_ref().unwrap().expiry,
         domain: Some("simpletest.arch".into()),
         subdomains: Some(vec![]),
         accounts: Some(vec![]),

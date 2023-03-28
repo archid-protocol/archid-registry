@@ -71,5 +71,6 @@ pub struct ResolveRecordResponse {
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct RecordExpirationResponse {
+    pub created: u64,
     pub expiration: u64,
 }

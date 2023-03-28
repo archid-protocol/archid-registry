@@ -34,6 +34,7 @@ pub fn config_read(storage: &dyn Storage) -> ReadonlySingleton<Config> {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct NameRecord {
     pub owner: Addr,
+    pub created: u64,
     pub expiration: u64,
 }
 impl NameRecord {

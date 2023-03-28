@@ -93,7 +93,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub fn execute_register(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     name: String,
 ) -> Result<Response, ContractError> {
@@ -113,7 +113,7 @@ pub fn execute_register(
         registration = MAX_BASE_INTERVAL;
     }
     if let Some(curr_value) = curr {
-        if !curr_value.is_expired(&_env.block) {
+        if !curr_value.is_expired(&env.block) {
             return Err(ContractError::NameTaken { name });
         } else {
             let burn_msg = burn_handler(&name, &c.cw721)?;
@@ -121,13 +121,15 @@ pub fn execute_register(
         }
     }
     let expiration =
-        c.base_expiration.checked_mul(registration).unwrap() + _env.block.time.seconds();
+        c.base_expiration.checked_mul(registration).unwrap() + env.block.time.seconds();
+    let created = env.block.time.seconds();
 
     let record = NameRecord {
         owner: info.sender.clone(),
+        created,
         expiration,
     };
-    let mint_resp = mint_handler(&name, &info.sender, &c.cw721, expiration)?;
+    let mint_resp = mint_handler(&name, &info.sender, &c.cw721, created, expiration)?;
     messages.push(mint_resp);
     resolver(deps.storage).save(key, &record)?;
     Ok(Response::new().add_messages(messages))
@@ -135,7 +137,7 @@ pub fn execute_register(
 
 pub fn renew_registration(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     name: String,
 ) -> Result<Response, ContractError> {
@@ -143,7 +145,7 @@ pub fn renew_registration(
     let key = &name.as_bytes();
     let curr = (resolver(deps.storage).may_load(key)?).unwrap();
     let c: Config = config_read(deps.storage).load()?;
-    if curr.is_expired(&_env.block) {
+    if curr.is_expired(&env.block) {
         return Err(ContractError::NameOwnershipExpired { name });
     }
     let owner_response = query_name_owner(&name, &c.cw721, &deps).unwrap();
@@ -153,6 +155,7 @@ pub fn renew_registration(
 
     let record = NameRecord {
         owner: info.sender.clone(),
+        created: env.block.time.seconds(),
         expiration: c.base_expiration + curr.expiration,
     };
 
@@ -200,6 +203,7 @@ fn set_subdomain(
         true => &domain_config.expiration,
         false => &expiration,
     };
+    let created = env.block.time.seconds();
 
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
         let metadata_msg = add_subdomain_metadata(
@@ -208,6 +212,7 @@ fn set_subdomain(
             domain.clone(),
             subdomain,
             new_resolver.clone(),
+            created,
             *_expiration,
             mint,
         )?;
@@ -235,6 +240,7 @@ fn set_subdomain(
 
     let record = NameRecord {
         owner: new_resolver,
+        created,
         expiration: *_expiration,
     };
     resolver(deps.storage).save(key, &record)?;
@@ -245,7 +251,7 @@ fn set_subdomain(
             let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
-        let resp = mint_handler(&domain_route, &new_owner, &c.cw721, *_expiration)?;
+        let resp = mint_handler(&domain_route, &new_owner, &c.cw721, created, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
     } else {
@@ -300,6 +306,7 @@ pub fn update_resolver(
     let key = name.as_bytes();
     let record = NameRecord {
         owner: new_resolver,
+        created: curr.created,
         expiration: curr.expiration,
     };
     resolver(deps.storage).save(key, &record)?;

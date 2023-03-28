@@ -48,6 +48,7 @@ pub fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResu
     let key = name.as_bytes();
     let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
     let resp = RecordExpirationResponse {
+        created: curr.created,
         expiration: curr.expiration,
     };
     to_binary(&resp)
