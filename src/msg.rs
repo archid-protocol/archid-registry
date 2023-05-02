@@ -50,7 +50,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         config: Config,
     },
-    UpdataUserDomainData {
+    UpdateUserDomainData {
         name: String,
         metadata_update: MetaDataUpdateMsg,
     },

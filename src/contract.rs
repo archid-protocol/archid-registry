@@ -53,7 +53,7 @@ pub fn execute(
         ExecuteMsg::UpdateResolver { name, new_resolver } => {
             update_resolver(info, deps, env, format_name(name), new_resolver)
         }
-        ExecuteMsg::RegisterSubDomain {
+        ExecuteMsg::RegisterSubdomain {
             domain,
             subdomain,
             new_resolver,
@@ -71,13 +71,13 @@ pub fn execute(
             mint,
             expiration,
         ),
-        ExecuteMsg::UpdataUserDomainData {
+        ExecuteMsg::UpdateUserDomainData {
             name,
             metadata_update,
         } => user_metadata_update_handler(info, deps, format_name(name), metadata_update),
         ExecuteMsg::UpdateConfig { config } => update_config(deps, env, info, config),
         ExecuteMsg::Withdraw { amount } => withdraw_fees(info, deps, amount),
-        ExecuteMsg::RemoveSubDomain { domain, subdomain } => {
+        ExecuteMsg::RemoveSubdomain { domain, subdomain } => {
             remove_subdomain(info, deps, env, format_name(domain), subdomain)
         }
     }
