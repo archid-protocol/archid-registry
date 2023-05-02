@@ -35,7 +35,7 @@ pub enum ExecuteMsg {
         name: String,
         new_resolver: Addr,
     },
-    RegisterSubDomain {
+    RegisterSubdomain {
         domain: String,
         subdomain: String,
         new_resolver: Addr,
@@ -43,7 +43,7 @@ pub enum ExecuteMsg {
         mint: bool,
         expiration: u64,
     },
-    RemoveSubDomain {
+    RemoveSubdomain {
         domain: String,
         subdomain: String,
     },
