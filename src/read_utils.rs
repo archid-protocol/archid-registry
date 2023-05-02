@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, QueryRequest, StdError, StdResult, WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env,BlockInfo, QueryRequest, StdError, StdResult, WasmQuery,
 };
 
 use archid_token::{Extension, Metadata, QueryMsg as Cw721QueryMsg};
@@ -7,7 +7,7 @@ use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use crate::error::ContractError;
 use crate::msg::{RecordExpirationResponse, ResolveRecordResponse};
-use crate::state::resolver_read;
+use crate::state::{resolver_read, NameRecord};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
@@ -73,6 +73,15 @@ fn invalid_char(c: char) -> bool {
     let is_valid = c.is_ascii_digit() || c.is_ascii_lowercase() || (c == '-' || c == '_');
     !is_valid
 }
+
+pub fn is_expired(deps:&DepsMut,key:&[u8],block: &BlockInfo)->bool{
+    let r=resolver_read(deps.storage).may_load(key).unwrap();
+    match r.is_some(){
+        true=>r.unwrap().is_expired(block),
+        _=>true
+    }    
+}
+
 /// validate_name returns an error if the name is invalid
 /// (we require 3-64 lowercase ascii letters, numbers, or . - _)
 pub fn validate_name(name: &str) -> Result<(), ContractError> {

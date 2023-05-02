@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::MetaDataUpdateMsg;
 use crate::read_utils::get_name_body;
-use crate::read_utils::{query_current_metadata, query_name_owner};
+use crate::read_utils::{query_current_metadata, query_name_owner,is_expired};
 use crate::state::{config_read, mint_status, resolver, Config};
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, Subdomain, UpdateMetadataMsg,
@@ -163,7 +163,7 @@ pub fn remove_subdomain(
     let mut messages = Vec::new();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-
+    resolver(deps.storage).remove(key);
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
@@ -171,17 +171,16 @@ pub fn remove_subdomain(
         let subdomain_owner = query_name_owner(&domain_route, &c.cw721, &deps).unwrap();
         // if owner of the minted subdomain is not owner of the top level domain
         // and subdomain is not expired
-        if !((resolver(deps.storage).may_load(key)?)
-            .unwrap()
-            .is_expired(&env.block))
+        if !is_expired(&deps,key,&env.block)
             && subdomain_owner.owner != info.sender
         {
             return Err(ContractError::NameTaken { name: domain_route });
         }
         messages.push(remove_subdomain_metadata(&deps, &c.cw721, domain, subdomain).unwrap());
         messages.push(burn_handler(&domain_route, &c.cw721)?);
+        mint_status(deps.storage).remove(key);
     }
-    resolver(deps.storage).remove(key);
+    
     Ok(Response::new().add_messages(messages))
 }
 

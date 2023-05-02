@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{
-    format_name, query_current_metadata, query_name_owner, query_resolver,
+    format_name, is_expired, query_current_metadata, query_name_owner, query_resolver,
     query_resolver_expiration, validate_name, validate_subdomain,
 };
 use crate::state::{config, config_read, mint_status, resolver, Config, NameRecord};
@@ -145,7 +145,7 @@ pub fn renew_registration(
     let key = &name.as_bytes();
     let curr = (resolver(deps.storage).may_load(key)?).unwrap();
     let c: Config = config_read(deps.storage).load()?;
-    if curr.is_expired(&env.block) {
+    if is_expired(&deps, key, &env.block) {
         return Err(ContractError::NameOwnershipExpired { name });
     }
     let owner_response = query_name_owner(&name, &c.cw721, &deps).unwrap();
@@ -196,9 +196,13 @@ fn set_subdomain(
 
     let key = domain_route.as_bytes();
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+    if resolver(deps.storage).may_load(domain.as_bytes())?.is_none(){
+        return Err(ContractError::InvalidInput {});
+    }
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
-
+   
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
+    
     let _expiration = match expiration > domain_config.expiration {
         true => &domain_config.expiration,
         false => &expiration,
@@ -218,11 +222,9 @@ fn set_subdomain(
         )?;
         messages.push(metadata_msg);
     }
-    if has_minted
-        && !((resolver(deps.storage).may_load(key)?)
-            .unwrap()
-            .is_expired(&env.block))
-    {
+ 
+    
+    if has_minted && !is_expired(&deps, key, &env.block) {
         return Err(ContractError::NameTaken { name: domain_route });
     }
 
