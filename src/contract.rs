@@ -2,7 +2,9 @@ use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
     StdError, StdResult, Timestamp, Uint128,
 };
-
+use archid_token::{
+     Subdomain,
+};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{
@@ -143,12 +145,17 @@ pub fn renew_registration(
 ) -> Result<Response, ContractError> {
     validate_name(&name)?;
     let key = &name.as_bytes();
+    if(resolver(deps.storage).may_load(key)?).is_none(){
+        return Err(ContractError::InvalidInput {  })
+    }
     let curr = (resolver(deps.storage).may_load(key)?).unwrap();
+
     let c: Config = config_read(deps.storage).load()?;
     if is_expired(&deps, key, &env.block) {
         return Err(ContractError::NameOwnershipExpired { name });
     }
     let owner_response = query_name_owner(&name, &c.cw721, &deps).unwrap();
+
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
@@ -188,27 +195,60 @@ fn set_subdomain(
     mint: bool,
     expiration: u64,
 ) -> Result<Response, ContractError> {
+    //
     validate_name(&domain)?;
+    //
     validate_subdomain(&subdomain)?;
+    //
     let c: Config = config_read(deps.storage).load()?;
     let mut messages = Vec::new();
+    //
     let domain_route: String = format!("{}.{}", subdomain, domain);
-
+    //
     let key = domain_route.as_bytes();
+    // Check if a domain nft is currently in existence
     let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+    // check if doman resolves to a NameRecord throw error otherwise
     if resolver(deps.storage).may_load(domain.as_bytes())?.is_none(){
         return Err(ContractError::InvalidInput {});
     }
+    // load domain Name Record
     let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
-   
+    // get the current name owner
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-    
+
+    //set expiration to domain expiration if subdomain 
     let _expiration = match expiration > domain_config.expiration {
         true => &domain_config.expiration,
         false => &expiration,
     };
+    
     let created = env.block.time.seconds();
 
+    //check if nft is minted and has not expired. revert if both conditions are true
+    if has_minted && !is_expired(&deps, key, &env.block) {
+        return Err(ContractError::NameTaken { name: domain_route });
+    }
+    //revert is top level domain is expired
+    if domain_config.is_expired(&env.block) {
+        return Err(ContractError::NameOwnershipExpired { name: domain });
+    }
+    //revert is sender is not domain owner
+    if owner_response.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+    
+    // revert is block time is more than expirtaion
+    if env.block.time >= Timestamp::from_seconds(*_expiration) {
+        return Err(ContractError::InvalidInput {});
+    }
+    
+    let record = NameRecord {
+        owner: new_resolver.clone(),
+        created,
+        expiration: *_expiration,
+    };
+    // add subdomain metadata to top level domain but only if hasnt been registerd
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
         let metadata_msg = add_subdomain_metadata(
             &deps,
@@ -221,38 +261,31 @@ fn set_subdomain(
             mint,
         )?;
         messages.push(metadata_msg);
+    }else{
+        // update mint status and expiration
+        //find domain index and update expiry and mint status
+        let mut current_metadata: Metadata = query_current_metadata(&domain, &c.cw721, &deps).unwrap();
+        let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
+        let index=subdomains.iter().position(|r| &r.clone().name.unwrap() == &subdomain).unwrap();
+        subdomains[index].expiry=Some(*_expiration);
+        subdomains[index].minted=Some(mint);
+        let resp = send_data_update(&domain, &c.cw721, current_metadata)?;
+        messages.push(resp);
     }
- 
-    
-    if has_minted && !is_expired(&deps, key, &env.block) {
-        return Err(ContractError::NameTaken { name: domain_route });
-    }
-
-    if domain_config.is_expired(&env.block) {
-        return Err(ContractError::NameOwnershipExpired { name: domain });
-    }
-    if owner_response.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-    // revert if minted and not expired
-
-    if env.block.time >= Timestamp::from_seconds(expiration) {
-        return Err(ContractError::InvalidInput {});
-    }
-
-    let record = NameRecord {
-        owner: new_resolver,
-        created,
-        expiration: *_expiration,
-    };
+    // Sav new NameRecord
     resolver(deps.storage).save(key, &record)?;
+    // check if subdomain is to be minted an nft
     if mint {
+        // subdomain does not currently exist update mint status to true
         if !has_minted {
             mint_status(deps.storage).save(key, &true)?;
         } else {
+            // otherwise burn existing nft to remint
             let burn_msg = burn_handler(&domain_route, &c.cw721)?;
             messages.push(burn_msg);
         }
+               
+        // mint subdomain nft
         let resp = mint_handler(&domain_route, &new_owner, &c.cw721, created, *_expiration)?;
         messages.push(resp);
         Ok(Response::new().add_messages(messages))
