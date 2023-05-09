@@ -19,6 +19,16 @@ pub struct Config {
     pub base_cost: Uint128,
     pub base_expiration: u64,
 }
+pub enum SubDomainStatus {
+    //if subdomain in acive mint domain owner can only extend expiration up to domain expiration
+    EXISTING_MINT_ACTIVE,
+    // if subdomain expired owner can remint which will first burn existing nft
+    EXISTING_MINT_EXPIRED,
+    //if subdomain registered but not minted, owner can mint with any valid expiration
+    EXISTING_NON_MINT,
+    // if new subdomain owner can register and mint / not mint
+    NEW_SUBDOMAIN
+}
 pub fn config(storage: &mut dyn Storage) -> Singleton<Config> {
     singleton(storage, CONFIG_KEY)
 }
