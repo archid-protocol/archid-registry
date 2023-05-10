@@ -35,7 +35,7 @@ pub fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> 
 
     let address = match curr.is_expired(&_env.block) {
         true => None,
-        false => Some(String::from(&curr.owner)),
+        false => Some(String::from(&curr.resolver)),
     };
 
     let resp = ResolveRecordResponse {

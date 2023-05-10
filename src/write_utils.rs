@@ -33,6 +33,7 @@ pub fn add_subdomain_metadata(
         expiry: Some(expiry),
     });
     current_metadata.subdomains = Some((*subdomains).to_vec());
+    println!("{:?}",&current_metadata);
     let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
@@ -211,7 +212,9 @@ pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
     };
     Ok(msg.into())
 }
+pub fn update_sub_domain_expiry(name: &String, cw721: &Addr,){
 
+}
 pub fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
     let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
         token_id: name.to_string(),

@@ -127,7 +127,7 @@ pub fn execute_register(
     let created = env.block.time.seconds();
 
     let record = NameRecord {
-        owner: info.sender.clone(),
+        resolver: info.sender.clone(),
         created,
         expiration,
     };
@@ -161,7 +161,7 @@ pub fn renew_registration(
     }
 
     let record = NameRecord {
-        owner: info.sender.clone(),
+        resolver: info.sender.clone(),
         created: env.block.time.seconds(),
         expiration: c.base_expiration + curr.expiration,
     };
@@ -232,18 +232,18 @@ fn set_subdomain(
         false => &expiration,
     };
 
-    let mut Subdomain_Status: SubDomainStatus;
+    let mut subdomain_status: SubDomainStatus;
     // add subdomain metadata to top level domain but only if hasnt been registerd
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
-        Subdomain_Status = SubDomainStatus::NEW_SUBDOMAIN;
+        subdomain_status = SubDomainStatus::NEW_SUBDOMAIN;
     } else {
         match (has_minted, is_expired(&deps, key, &env.block)) {
-            (true, true) => Subdomain_Status = SubDomainStatus::EXISTING_MINT_EXPIRED,
-            (true, false) => Subdomain_Status = SubDomainStatus::EXISTING_MINT_ACTIVE,
-            (_, _) => Subdomain_Status = SubDomainStatus::EXISTING_NON_MINT,
+            (true, true) => subdomain_status = SubDomainStatus::EXISTING_MINT_EXPIRED,
+            (true, false) => subdomain_status = SubDomainStatus::EXISTING_MINT_ACTIVE,
+            (_, _) => subdomain_status = SubDomainStatus::EXISTING_NON_MINT,
         }
     }
-    let messages = match Subdomain_Status {
+    let messages = match subdomain_status {
         SubDomainStatus::NEW_SUBDOMAIN => register_new_subdomain(
             c.cw721,
             deps,
@@ -303,9 +303,11 @@ fn register_new_subdomain(
     mint: bool,
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
-    let key = format!("{}.{}", subdomain, domain).as_bytes();
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
     let mut messages = Vec::new();
     let created = env.block.time.seconds();
+    
     let metadata_msg = add_subdomain_metadata(
         &deps,
         &nft,
@@ -318,7 +320,7 @@ fn register_new_subdomain(
     )?;
     messages.push(metadata_msg);
     let record = NameRecord {
-        owner: new_resolver,
+        resolver: new_resolver,
         created,
         expiration: expiration,
     };
@@ -327,7 +329,7 @@ fn register_new_subdomain(
         mint_status(deps.storage).save(key, &true)?;
 
         let resp = mint_handler(
-            &format!("{}.{}", subdomain, domain),
+            &domain_route,
             &new_owner,
             &nft,
             created,
@@ -337,6 +339,7 @@ fn register_new_subdomain(
     }
     Ok(messages)
 }
+// can be used to mint and update resolver for non minted
 fn update_non_mint_subdomain(
     nft: Addr,
     deps: DepsMut,
@@ -349,7 +352,8 @@ fn update_non_mint_subdomain(
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = Vec::new();
-    let key = format!("{}.{}", subdomain, domain).as_bytes();
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
     let created = env.block.time.seconds();
     mint_status(deps.storage).save(key, &true)?;
     let msg = update_subdomain_metadata(
@@ -364,7 +368,7 @@ fn update_non_mint_subdomain(
     )?;
     messages.push(msg);
     let resp = mint_handler(
-        &format!("{}.{}", subdomain, domain),
+        &domain_route,
         &new_owner,
         &nft,
         created,
@@ -384,7 +388,8 @@ fn burn_remint_subdomain(
     mint: bool,
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
-    let key = format!("{}.{}", subdomain, domain).as_bytes();
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
     let mut messages = Vec::new();
     let created = env.block.time.seconds();
     let burn_msg = burn_handler(&format!("{}.{}", subdomain, domain), &nft)?;
@@ -402,7 +407,7 @@ fn burn_remint_subdomain(
     )?;
     messages.push(metadata_msg);
     let record = NameRecord {
-        owner: new_resolver,
+        resolver: new_resolver,
         created,
         expiration: expiration,
     };
@@ -411,7 +416,7 @@ fn burn_remint_subdomain(
         mint_status(deps.storage).save(key, &true)?;
 
         let resp = mint_handler(
-            &format!("{}.{}", subdomain, domain),
+            &domain_route,
             &new_owner,
             &nft,
             created,
@@ -434,16 +439,18 @@ fn update_minted_subdomain_expiry(
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = Vec::new();
-    let key = format!("{}.{}", subdomain, domain).as_bytes();
-    let created = env.block.time.seconds();
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
+   
 
     let msg = update_subdomain_metadata(
         &deps,
         &nft,
         domain,
         subdomain,
-        new_resolver,
-        created,
+        domain_config.resolver,
+        domain_config.created,
         expiration,
         true,
     )?;
@@ -498,7 +505,7 @@ pub fn update_resolver(
     }
     let key = name.as_bytes();
     let record = NameRecord {
-        owner: new_resolver,
+        resolver: new_resolver,
         created: curr.created,
         expiration: curr.expiration,
     };
