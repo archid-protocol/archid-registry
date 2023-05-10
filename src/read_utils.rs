@@ -7,7 +7,7 @@ use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use crate::error::ContractError;
 use crate::msg::{RecordExpirationResponse, ResolveRecordResponse};
-use crate::state::{resolver_read, NameRecord};
+use crate::state::{resolver_read};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;

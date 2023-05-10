@@ -12,10 +12,10 @@ use crate::write_utils::{
     send_tokens, update_subdomain_metadata, user_metadata_update_handler, DENOM,
 };
 use archid_token::Metadata;
-use archid_token::Subdomain;
+
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError, StdResult, Timestamp, Uint128,
+    StdError, StdResult, Uint128,
 };
 use cw_utils::must_pay;
 use std::convert::TryFrom;
@@ -232,7 +232,7 @@ fn set_subdomain(
         false => &expiration,
     };
 
-    let mut subdomain_status: SubDomainStatus;
+    let subdomain_status: SubDomainStatus;
     // add subdomain metadata to top level domain but only if hasnt been registerd
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
         subdomain_status = SubDomainStatus::NEW_SUBDOMAIN;
@@ -277,21 +277,15 @@ fn set_subdomain(
             mint,
             *_expiration,
         ),
-        SubDomainStatus::EXISTING_MINT_ACTIVE => update_minted_subdomain_expiry(
-            c.cw721,
-            deps,
-            env,
-            domain,
-            subdomain,
-            new_resolver,
-            new_owner,
-            mint,
-            *_expiration,
-        ),
+
+        SubDomainStatus::EXISTING_MINT_ACTIVE => {
+            update_minted_subdomain_expiry(c.cw721, deps, domain, subdomain, *_expiration)
+        }
     };
     Ok(Response::new().add_messages(messages.unwrap()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn register_new_subdomain(
     nft: Addr,
     deps: DepsMut,
@@ -307,11 +301,11 @@ fn register_new_subdomain(
     let key = domain_route.as_bytes();
     let mut messages = Vec::new();
     let created = env.block.time.seconds();
-    
+
     let metadata_msg = add_subdomain_metadata(
         &deps,
         &nft,
-        domain.clone(),
+        domain,
         subdomain,
         new_resolver.clone(),
         env.block.time.seconds(),
@@ -322,24 +316,19 @@ fn register_new_subdomain(
     let record = NameRecord {
         resolver: new_resolver,
         created,
-        expiration: expiration,
+        expiration,
     };
     resolver(deps.storage).save(key, &record)?;
     if mint {
         mint_status(deps.storage).save(key, &true)?;
 
-        let resp = mint_handler(
-            &domain_route,
-            &new_owner,
-            &nft,
-            created,
-            expiration,
-        )?;
+        let resp = mint_handler(&domain_route, &new_owner, &nft, created, expiration)?;
         messages.push(resp);
     }
     Ok(messages)
 }
 // can be used to mint and update resolver for non minted
+#[allow(clippy::too_many_arguments)]
 fn update_non_mint_subdomain(
     nft: Addr,
     deps: DepsMut,
@@ -356,27 +345,14 @@ fn update_non_mint_subdomain(
     let key = domain_route.as_bytes();
     let created = env.block.time.seconds();
     mint_status(deps.storage).save(key, &true)?;
-    let msg = update_subdomain_metadata(
-        &deps,
-        &nft,
-        domain,
-        subdomain,
-        new_resolver,
-        created,
-        expiration,
-        mint,
-    )?;
+    let msg =
+        update_subdomain_metadata(&deps, &nft, domain, subdomain, new_resolver, created, mint)?;
     messages.push(msg);
-    let resp = mint_handler(
-        &domain_route,
-        &new_owner,
-        &nft,
-        created,
-        expiration,
-    )?;
+    let resp = mint_handler(&domain_route, &new_owner, &nft, created, expiration)?;
     messages.push(resp);
     Ok(messages)
 }
+#[allow(clippy::too_many_arguments)]
 fn burn_remint_subdomain(
     deps: DepsMut,
     nft: Addr,
@@ -398,7 +374,7 @@ fn burn_remint_subdomain(
     let metadata_msg = add_subdomain_metadata(
         &deps,
         &nft,
-        domain.clone(),
+        domain,
         subdomain,
         new_resolver.clone(),
         env.block.time.seconds(),
@@ -409,40 +385,28 @@ fn burn_remint_subdomain(
     let record = NameRecord {
         resolver: new_resolver,
         created,
-        expiration: expiration,
+        expiration,
     };
     resolver(deps.storage).save(key, &record)?;
     if mint {
         mint_status(deps.storage).save(key, &true)?;
 
-        let resp = mint_handler(
-            &domain_route,
-            &new_owner,
-            &nft,
-            created,
-            expiration,
-        )?;
+        let resp = mint_handler(&domain_route, &new_owner, &nft, created, expiration)?;
         messages.push(resp);
     }
     Ok(messages)
 }
 fn update_minted_subdomain_expiry(
     nft: Addr,
-
-    deps: DepsMut,
-    env: Env,
+    deps: DepsMut,    
     domain: String,
     subdomain: String,
-    new_resolver: Addr,
-    new_owner: Addr,
-    mint: bool,
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = Vec::new();
     let domain_route: String = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
-    let domain_config: NameRecord = (resolver(deps.storage).may_load(domain.as_bytes())?).unwrap();
-   
+    let domain_config: NameRecord = (resolver(deps.storage).may_load(key)?).unwrap();
 
     let msg = update_subdomain_metadata(
         &deps,
@@ -450,7 +414,6 @@ fn update_minted_subdomain_expiry(
         domain,
         subdomain,
         domain_config.resolver,
-        domain_config.created,
         expiration,
         true,
     )?;

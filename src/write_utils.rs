@@ -13,6 +13,8 @@ use archid_token::{
 };
 
 pub static DENOM: &str = "uconst";
+
+#[allow(clippy::too_many_arguments)] 
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
     cw721: &Addr,
@@ -42,15 +44,17 @@ pub fn update_subdomain_metadata(deps: &DepsMut,
     domain: String,
     subdomain: String,
     resolver: Addr,
-    created: u64,
+
     expiry: u64,
     mint: bool)-> StdResult<CosmosMsg> {
         let mut current_metadata: Metadata = query_current_metadata(&domain, cw721, deps).unwrap();
         let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
-        let index=subdomains.iter().position(|r| &r.clone().name.unwrap() == &subdomain).unwrap();
+        let index=subdomains.iter().position(|r| r.clone().name.unwrap() == subdomain).unwrap();
         subdomains[index].expiry=Some(expiry);
         subdomains[index].minted=Some(mint);
-        let resp = send_data_update(&domain, &cw721, current_metadata)?;
+        subdomains[index].resolver=Some(resolver);
+        current_metadata.subdomains = Some((*subdomains).to_vec());
+        let resp = send_data_update(&domain, cw721, current_metadata)?;
         Ok(resp)
 }
 pub fn remove_subdomain_metadata(
@@ -212,9 +216,7 @@ pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
     };
     Ok(msg.into())
 }
-pub fn update_sub_domain_expiry(name: &String, cw721: &Addr,){
 
-}
 pub fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResult<CosmosMsg> {
     let update = Cw721ExecuteMsg::UpdateMetadata(UpdateMetadataMsg {
         token_id: name.to_string(),
