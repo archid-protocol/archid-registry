@@ -36,6 +36,22 @@ pub fn add_subdomain_metadata(
     let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
+pub fn update_subdomain_metadata(deps: &DepsMut,
+    cw721: &Addr,
+    domain: String,
+    subdomain: String,
+    resolver: Addr,
+    created: u64,
+    expiry: u64,
+    mint: bool)-> StdResult<CosmosMsg> {
+        let mut current_metadata: Metadata = query_current_metadata(&domain, cw721, deps).unwrap();
+        let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
+        let index=subdomains.iter().position(|r| &r.clone().name.unwrap() == &subdomain).unwrap();
+        subdomains[index].expiry=Some(expiry);
+        subdomains[index].minted=Some(mint);
+        let resp = send_data_update(&domain, &cw721, current_metadata)?;
+        Ok(resp)
+}
 pub fn remove_subdomain_metadata(
     deps: &DepsMut,
     cw721: &Addr,
