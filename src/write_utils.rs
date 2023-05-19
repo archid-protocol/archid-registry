@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::msg::MetaDataUpdateMsg;
 use crate::read_utils::get_name_body;
 use crate::read_utils::{query_current_metadata, query_name_owner,is_expired};
-use crate::state::{config_read, resolver, Config};
+use crate::state::{config_read, resolver, Config,NameRecord};
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, Subdomain, UpdateMetadataMsg,
 };
@@ -56,6 +56,36 @@ pub fn update_subdomain_metadata(deps: &DepsMut,
         current_metadata.subdomains = Some((*subdomains).to_vec());
         let resp = send_data_update(&domain, cw721, current_metadata)?;
         Ok(resp)
+}
+pub fn update_subdomain_expiry(
+    nft: Addr,
+    deps: DepsMut,
+    domain: String,
+    subdomain: String,
+    expiration: u64,
+) -> StdResult<Vec<CosmosMsg>> {
+    let mut messages = Vec::new();
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let domain_config: NameRecord = (resolver(deps.storage).may_load(key)?).unwrap();
+    let record = NameRecord {
+        resolver:domain_config.resolver.clone(),
+        created:domain_config.created,
+        expiration,
+    };
+    resolver(deps.storage).save(key, &record)?;
+    let msg = update_subdomain_metadata(
+        &deps,
+        &nft,
+        domain,
+        subdomain,
+        domain_config.resolver,
+        expiration,
+        true,
+    )?;
+    messages.push(msg);
+
+    Ok(messages)
 }
 pub fn remove_subdomain_metadata(
     deps: &DepsMut,

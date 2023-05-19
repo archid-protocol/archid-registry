@@ -35,7 +35,7 @@ pub enum ExecuteMsg {
         domain: String,
         subdomain: String,
         expiration: u64,
-    }
+    },
     UpdateResolver {
         name: String,
         new_resolver: Addr,
