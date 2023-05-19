@@ -23,9 +23,7 @@ pub enum SubDomainStatus {
     //if subdomain in acive mint domain owner can only extend expiration up to domain expiration
     EXISTING_MINT_ACTIVE,
     // if subdomain expired owner can remint which will first burn existing nft
-    EXISTING_MINT_EXPIRED,
-    //if subdomain registered but not minted, owner can mint with any valid expiration
-    EXISTING_NON_MINT,
+    EXISTING_MINT_EXPIRED,    
     // if new subdomain owner can register and mint / not mint
     NEW_SUBDOMAIN
 }
@@ -58,10 +56,4 @@ pub fn resolver(storage: &mut dyn Storage) -> Bucket<NameRecord> {
 
 pub fn resolver_read(storage: &dyn Storage) -> ReadonlyBucket<NameRecord> {
     bucket_read(storage, NAME_RESOLVER_KEY)
-}
-pub fn mint_status(storage: &mut dyn Storage) -> Bucket<bool> {
-    bucket(storage, SUBDOMAIN_MINTED)
-}
-pub fn mint_status_read(storage: &mut dyn Storage) -> ReadonlyBucket<bool> {
-    bucket_read(storage, SUBDOMAIN_MINTED)
 }

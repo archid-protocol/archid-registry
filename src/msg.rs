@@ -31,6 +31,11 @@ pub enum ExecuteMsg {
     RenewRegistration {
         name: String,
     },
+    ExtendSubdomainExpiry{
+        domain: String,
+        subdomain: String,
+        expiration: u64,
+    }
     UpdateResolver {
         name: String,
         new_resolver: Addr,

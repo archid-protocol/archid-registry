@@ -73,6 +73,15 @@ pub fn execute(
             mint,
             expiration,
         ),
+        ExecuteMsg::ExtendSubdomainExpiry{
+            domain,
+            subdomain,
+            expiry,
+        }=> update_minted_subdomain_expiry( info,
+            deps,
+            env,
+            format_name(name),
+            subdomain,)
         ExecuteMsg::UpdateUserDomainData {
             name,
             metadata_update,
@@ -206,7 +215,7 @@ fn set_subdomain(
     //
     let key = domain_route.as_bytes();
     // Check if a domain nft is currently in existence
-    let has_minted: bool = mint_status(deps.storage).may_load(key)?.is_some();
+   
     // check if doman resolves to a NameRecord throw error otherwise
     if resolver(deps.storage)
         .may_load(domain.as_bytes())?
@@ -237,10 +246,9 @@ fn set_subdomain(
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
         subdomain_status = SubDomainStatus::NEW_SUBDOMAIN;
     } else {
-        match (has_minted, is_expired(&deps, key, &env.block)) {
-            (true, true) => subdomain_status = SubDomainStatus::EXISTING_MINT_EXPIRED,
-            (true, false) => subdomain_status = SubDomainStatus::EXISTING_MINT_ACTIVE,
-            (_, _) => subdomain_status = SubDomainStatus::EXISTING_NON_MINT,
+        match (is_expired(&deps, key, &env.block)) {
+            true => subdomain_status = SubDomainStatus::EXISTING_MINT_EXPIRED,
+            false => subdomain_status = SubDomainStatus::EXISTING_MINT_ACTIVE,            
         }
     }
     let messages = match subdomain_status {
@@ -254,18 +262,7 @@ fn set_subdomain(
             new_owner,
             mint,
             *_expiration,
-        ),
-        SubDomainStatus::EXISTING_NON_MINT => update_non_mint_subdomain(
-            c.cw721,
-            deps,
-            env,
-            domain,
-            subdomain,
-            new_resolver,
-            new_owner,
-            mint,
-            domain_config.expiration,
-        ),
+        ),       
         SubDomainStatus::EXISTING_MINT_EXPIRED => burn_remint_subdomain(
             deps,
             c.cw721,
@@ -396,7 +393,16 @@ fn burn_remint_subdomain(
     }
     Ok(messages)
 }
-fn update_minted_subdomain_expiry(
+fn  update_minted_subdomain_expiry(deps: DepsMut,
+    nft: Addr,
+    env: Env,
+    domain: String,
+    subdomain: String,
+    expiration: u64)-> StdResult<Vec<CosmosMsg>>{
+        
+        _update_minted_subdomain_expiry()
+}
+fn _update_minted_subdomain_expiry(
     nft: Addr,
     deps: DepsMut,    
     domain: String,
