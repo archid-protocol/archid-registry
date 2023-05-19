@@ -58,7 +58,6 @@ pub fn execute(
             subdomain,
             new_resolver,
             new_owner,
-            mint,
             expiration,
         } => set_subdomain(
             info,
@@ -68,7 +67,6 @@ pub fn execute(
             subdomain,
             new_resolver,
             new_owner,
-            mint,
             expiration,
         ),
         ExecuteMsg::ExtendSubdomainExpiry {
@@ -195,7 +193,6 @@ fn set_subdomain(
     subdomain: String,
     new_resolver: Addr,
     new_owner: Addr,
-    mint: bool,
     expiration: u64,
 ) -> Result<Response, ContractError> {
     //
@@ -238,15 +235,16 @@ fn set_subdomain(
     let subdomain_status: SubDomainStatus;
     // add subdomain metadata to top level domain but only if hasnt been registerd
     if resolver(deps.storage).may_load(key).unwrap().is_none() {
-        subdomain_status = SubDomainStatus::NEW_SUBDOMAIN;
+        subdomain_status = SubDomainStatus::NewSubdomain;
     } else {
         match is_expired(&deps, key, &env.block) {
-            true => subdomain_status = SubDomainStatus::EXISTING_MINT_EXPIRED,
-            false => subdomain_status = SubDomainStatus::EXISTING_MINT_ACTIVE,
+            true => subdomain_status = SubDomainStatus::ExistingMintExpired,
+            false => subdomain_status = SubDomainStatus::ExistingMintActive,
         }
     }
+    //println!("{:?}",subdomain_status);
     let messages = match subdomain_status {
-        SubDomainStatus::NEW_SUBDOMAIN => register_new_subdomain(
+        SubDomainStatus::NewSubdomain => register_new_subdomain(
             c.cw721,
             deps,
             env,
@@ -254,10 +252,9 @@ fn set_subdomain(
             subdomain,
             new_resolver,
             new_owner,
-            mint,
             *_expiration,
         ),
-        SubDomainStatus::EXISTING_MINT_EXPIRED => burn_remint_subdomain(
+        SubDomainStatus::ExistingMintExpired => burn_remint_subdomain(
             deps,
             c.cw721,
             env,
@@ -265,11 +262,9 @@ fn set_subdomain(
             subdomain,
             new_resolver,
             new_owner,
-            mint,
             *_expiration,
         ),
-
-        SubDomainStatus::EXISTING_MINT_ACTIVE => return Err(ContractError::Unauthorized {}),
+        SubDomainStatus::ExistingMintActive => return Err(ContractError::Unauthorized {}),
     };
     Ok(Response::new().add_messages(messages.unwrap()))
 }
@@ -283,7 +278,6 @@ fn register_new_subdomain(
     subdomain: String,
     new_resolver: Addr,
     new_owner: Addr,
-    mint: bool,
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
     let domain_route: String = format!("{}.{}", subdomain, domain);
@@ -299,7 +293,6 @@ fn register_new_subdomain(
         new_resolver.clone(),
         env.block.time.seconds(),
         expiration,
-        mint,
     )?;
     messages.push(metadata_msg);
     let record = NameRecord {
@@ -325,7 +318,6 @@ fn burn_remint_subdomain(
     subdomain: String,
     new_resolver: Addr,
     new_owner: Addr,
-    mint: bool,
     expiration: u64,
 ) -> StdResult<Vec<CosmosMsg>> {
     let domain_route: String = format!("{}.{}", subdomain, domain);
@@ -343,7 +335,6 @@ fn burn_remint_subdomain(
         new_resolver.clone(),
         env.block.time.seconds(),
         expiration,
-        mint,
     )?;
     messages.push(metadata_msg);
     let record = NameRecord {
@@ -373,8 +364,7 @@ fn extend_subdomain_expiry(
     let c: Config = config_read(deps.storage).load()?;
     //
     let domain_route: String = format!("{}.{}", subdomain, domain);
-    //
-    let key = domain_route.as_bytes();
+
     // Check if a domain nft is currently in existence
 
     // check if doman resolves to a NameRecord throw error otherwise
@@ -398,6 +388,8 @@ fn extend_subdomain_expiry(
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
+    println!("{:?}",subdomain_config.expiration);
+    println!("{:?}",expiration);
     if expiration <= subdomain_config.expiration {
         return Err(ContractError::InvalidInput {});
     }

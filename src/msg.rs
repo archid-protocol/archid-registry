@@ -31,7 +31,7 @@ pub enum ExecuteMsg {
     RenewRegistration {
         name: String,
     },
-    ExtendSubdomainExpiry{
+    ExtendSubdomainExpiry {
         domain: String,
         subdomain: String,
         expiration: u64,
@@ -45,7 +45,6 @@ pub enum ExecuteMsg {
         subdomain: String,
         new_resolver: Addr,
         new_owner: Addr,
-        mint: bool,
         expiration: u64,
     },
     RemoveSubdomain {

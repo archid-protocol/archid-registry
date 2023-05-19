@@ -6,15 +6,15 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::MetaDataUpdateMsg;
 use crate::read_utils::get_name_body;
-use crate::read_utils::{query_current_metadata, query_name_owner,is_expired};
-use crate::state::{config_read, resolver, Config,NameRecord};
+use crate::read_utils::{is_expired, query_current_metadata, query_name_owner};
+use crate::state::{config_read, resolver, Config, NameRecord};
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, Subdomain, UpdateMetadataMsg,
 };
 
 pub static DENOM: &str = "uconst";
 
-#[allow(clippy::too_many_arguments)] 
+#[allow(clippy::too_many_arguments)]
 pub fn add_subdomain_metadata(
     deps: &DepsMut,
     cw721: &Addr,
@@ -23,39 +23,41 @@ pub fn add_subdomain_metadata(
     resolver: Addr,
     created: u64,
     expiry: u64,
-    minted: bool,
 ) -> StdResult<CosmosMsg> {
     let mut current_metadata: Metadata = query_current_metadata(&name, cw721, deps).unwrap();
     let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
     subdomains.push(Subdomain {
         name: Some(subdomain),
         resolver: Some(resolver),
-        minted: Some(minted),
+        minted: None,
         created: Some(created),
         expiry: Some(expiry),
     });
     current_metadata.subdomains = Some((*subdomains).to_vec());
-    println!("{:?}",&current_metadata);
+    println!("{:?}", &current_metadata);
     let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }
-pub fn update_subdomain_metadata(deps: &DepsMut,
+pub fn update_subdomain_metadata(
+    deps: &DepsMut,
     cw721: &Addr,
     domain: String,
     subdomain: String,
     resolver: Addr,
-
     expiry: u64,
-    mint: bool)-> StdResult<CosmosMsg> {
-        let mut current_metadata: Metadata = query_current_metadata(&domain, cw721, deps).unwrap();
-        let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
-        let index=subdomains.iter().position(|r| r.clone().name.unwrap() == subdomain).unwrap();
-        subdomains[index].expiry=Some(expiry);
-        subdomains[index].minted=Some(mint);
-        subdomains[index].resolver=Some(resolver);
-        current_metadata.subdomains = Some((*subdomains).to_vec());
-        let resp = send_data_update(&domain, cw721, current_metadata)?;
-        Ok(resp)
+) -> StdResult<CosmosMsg> {
+    let mut current_metadata: Metadata = query_current_metadata(&domain, cw721, deps).unwrap();
+    let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
+    let index = subdomains
+        .iter()
+        .position(|r| r.clone().name.unwrap() == subdomain)
+        .unwrap();
+    subdomains[index].expiry = Some(expiry);
+    subdomains[index].minted = None;
+    subdomains[index].resolver = Some(resolver);
+    current_metadata.subdomains = Some((*subdomains).to_vec());
+    let resp = send_data_update(&domain, cw721, current_metadata)?;
+    Ok(resp)
 }
 pub fn update_subdomain_expiry(
     nft: Addr,
@@ -69,8 +71,8 @@ pub fn update_subdomain_expiry(
     let key = domain_route.as_bytes();
     let domain_config: NameRecord = (resolver(deps.storage).may_load(key)?).unwrap();
     let record = NameRecord {
-        resolver:domain_config.resolver.clone(),
-        created:domain_config.created,
+        resolver: domain_config.resolver.clone(),
+        created: domain_config.created,
         expiration,
     };
     resolver(deps.storage).save(key, &record)?;
@@ -81,7 +83,6 @@ pub fn update_subdomain_expiry(
         subdomain,
         domain_config.resolver,
         expiration,
-        true,
     )?;
     messages.push(msg);
 
@@ -212,7 +213,7 @@ pub fn remove_subdomain(
     let domain_route = format!("{}.{}", subdomain, domain);
     let key = domain_route.as_bytes();
     let mut messages = Vec::new();
-   
+
     let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
     resolver(deps.storage).remove(key);
     if owner_response.owner != info.sender {
@@ -221,16 +222,11 @@ pub fn remove_subdomain(
     let subdomain_owner = query_name_owner(&domain_route, &c.cw721, &deps).unwrap();
     // if owner of the minted subdomain is not owner of the top level domain
     // and subdomain is not expired
-    if !is_expired(&deps,key,&env.block)
-        && subdomain_owner.owner != info.sender
-    {
+    if !is_expired(&deps, key, &env.block) && subdomain_owner.owner != info.sender {
         return Err(ContractError::NameTaken { name: domain_route });
     }
     messages.push(remove_subdomain_metadata(&deps, &c.cw721, domain, subdomain).unwrap());
     messages.push(burn_handler(&domain_route, &c.cw721)?);
-        
-    
-    
     Ok(Response::new().add_messages(messages))
 }
 

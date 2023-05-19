@@ -142,8 +142,8 @@ fn basic_domain_test() {
     let update_msg = ExecuteMsg::UpdateConfig {
         config: update_config,
     };
-    print!("{}","Starting QUERY");
-  
+    print!("{}", "Starting QUERY");
+
     let _config_update =
         app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
 
@@ -185,14 +185,14 @@ fn basic_domain_test() {
         token_id: String::from("lolz.arch"),
         include_expired: None,
     };
-    print!("{}","Starting QUERY");
+    print!("{}", "Starting QUERY");
     let _total: NumTokensResponse = query(
         &mut app,
         nft.clone(),
         Cw721QueryMsg::<Extension>::NumTokens {},
     )
     .unwrap();
-     println!("{}", _total.count);
+    println!("{}", _total.count);
 
     let _resolve: ResolveRecordResponse = query(
         &mut app,
@@ -203,7 +203,7 @@ fn basic_domain_test() {
     )
     .unwrap();
     let _nft_owner: OwnerOfResponse = query(&mut app, nft.clone(), owner_query).unwrap();
-   
+
     // println!("{:?}", resolve.address.unwrap());
     // println!("{:?}", nft_owner);
 
@@ -221,7 +221,7 @@ fn basic_domain_test() {
         subdomain: String::from("dapp"),
         new_resolver: mock.clone(),
         new_owner: mock.clone(),
-        mint: true,
+
         expiration: expiration.expiration,
     };
     let _res2 = app.execute_contract(
@@ -275,7 +275,7 @@ fn basic_domain_test() {
         subdomain: String::from("subdomain2"),
         new_resolver: mock.clone(),
         new_owner: mock.clone(),
-        mint: true,
+
         expiration: expiration.expiration,
     };
     let _res3 = app.execute_contract(
@@ -399,8 +399,7 @@ fn test_expired_domains() {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
         new_resolver: mock.clone(),
-        new_owner: mock.clone(),
-        mint: false,
+        new_owner: mock.clone(),        
         expiration: current_time + 1000,
     };
     assert!(app
@@ -530,7 +529,6 @@ fn test_subdomain_rules() {
         subdomain: String::from("subdomain"),
         new_resolver: name_owner2.clone(),
         new_owner: mock.clone(),
-        mint: true,
         expiration: current_time + 43200,
     };
     let _res3 = app.execute_contract(
@@ -647,8 +645,16 @@ fn test_remint_subdomain() {
         subdomain: String::from("subdomain"),
         new_resolver: name_owner2.clone(),
         new_owner: name_owner.clone(),
-        mint: true,
-        expiration: current_time + 43200,
+
+        expiration: current_time + 93200,
+    };
+    let subdomain_msg2 = ExecuteMsg::RegisterSubdomain {
+        domain: String::from("simpletest"),
+        subdomain: String::from("subdomain"),
+        new_resolver: name_owner2.clone(),
+        new_owner: name_owner2.clone(),
+
+        expiration: current_time + 93200,
     };
     app.execute_contract(
         name_owner.clone(),
@@ -656,12 +662,12 @@ fn test_remint_subdomain() {
         &subdomain_msg,
         &[],
     );
-    let remove_sudomain_msg=ExecuteMsg::RemoveSubdomain{
+    let remove_sudomain_msg = ExecuteMsg::RemoveSubdomain {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
     };
     println!("{:?}", "REMOVING!!!");
-    let rr=app.execute_contract(
+    let rr = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &remove_sudomain_msg,
@@ -669,27 +675,55 @@ fn test_remint_subdomain() {
     );
     println!("{:?}", rr);
     println!("{:?}", "MINTING!!!");
-    let r=app.execute_contract(
+    let r = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
-        &subdomain_msg,
+        &subdomain_msg2,
         &[],
     );
-    println!("{:?}","RESPT");
+    println!("{:?}", "RESPT");
     println!("{:?}", r);
     let subdomain_msg_bad = ExecuteMsg::RegisterSubdomain {
         domain: String::from("simpletest22"),
         subdomain: String::from("subdomain"),
         new_resolver: name_owner2.clone(),
         new_owner: name_owner.clone(),
-        mint: true,
         expiration: current_time + 43200,
     };
-    let rrr=app.execute_contract(
+    let rrr = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg_bad,
         &[],
     );
-   // println!("{:?}", rrr);
+    assert!(app.execute_contract(
+            name_owner.clone(),
+            name_service.clone(),
+            &subdomain_msg_bad,
+            &[],
+        )
+        .is_err());
+    let extendMsg= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time + 91200 };
+    // non domain owner cannot extend
+    assert!(app.execute_contract(
+        name_owner2.clone(),
+        name_service.clone(),
+        &extendMsg,
+        &[],
+    ).is_err());
+    assert!(app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &extendMsg,
+        &[],
+    ).is_ok());
+    
+    let extendMsgBad= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time  };
+    //Bad Expiration time. TGo early
+    assert!(app.execute_contract(
+        name_owner.clone(),
+        name_service.clone(),
+        &extendMsgBad,
+        &[],
+    ).is_err());
 }
