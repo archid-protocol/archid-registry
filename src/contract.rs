@@ -1,13 +1,14 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{
-    format_name, is_expired, query_current_metadata, query_name_owner, query_resolver,
-    query_resolver_expiration, validate_name, validate_subdomain,
+    format_name, get_subdomain_prefix, is_expired, query_current_metadata, query_name_owner,
+    query_resolver, query_resolver_expiration, validate_name, validate_subdomain,
 };
 use crate::state::{config, config_read, resolver, Config, NameRecord, SubDomainStatus};
 use crate::write_utils::{
     add_subdomain_metadata, burn_handler, mint_handler, remove_subdomain, send_data_update,
-    send_tokens, update_subdomain_expiry, user_metadata_update_handler, DENOM,
+    send_tokens, update_subdomain_expiry, update_subdomain_metadata, user_metadata_update_handler,
+    DENOM,
 };
 use archid_token::Metadata;
 
@@ -242,7 +243,7 @@ fn set_subdomain(
             false => subdomain_status = SubDomainStatus::ExistingMintActive,
         }
     }
-    //println!("{:?}",subdomain_status);
+
     let messages = match subdomain_status {
         SubDomainStatus::NewSubdomain => register_new_subdomain(
             c.cw721,
@@ -388,8 +389,8 @@ fn extend_subdomain_expiry(
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-    println!("{:?}",subdomain_config.expiration);
-    println!("{:?}",expiration);
+    //println!("{:?}",subdomain_config.expiration);
+    //println!("{:?}",expiration);
     if expiration <= subdomain_config.expiration {
         return Err(ContractError::InvalidInput {});
     }
@@ -435,11 +436,12 @@ pub fn update_resolver(
     new_resolver: Addr,
 ) -> Result<Response, ContractError> {
     let c: Config = config_read(deps.storage).load()?;
+
     let owner_response = query_name_owner(&name, &c.cw721, &deps)?;
     if owner_response.owner != info.sender {
         return Err(ContractError::Unauthorized {});
     }
-
+    let subdomain = get_subdomain_prefix(name.clone());
     let key = name.as_bytes();
     let curr = (resolver(deps.storage).may_load(key)?).unwrap();
     if curr.is_expired(&env.block) {
@@ -447,12 +449,26 @@ pub fn update_resolver(
     }
     let key = name.as_bytes();
     let record = NameRecord {
-        resolver: new_resolver,
+        resolver: new_resolver.clone(),
         created: curr.created,
         expiration: curr.expiration,
     };
+    let mut messages = Vec::new();
+    if subdomain.is_some() {
+        let s = subdomain.unwrap().clone();
+        let resp = update_subdomain_metadata(
+            &deps,
+            &c.cw721,
+            &s[1],
+            &s[0],
+            new_resolver,
+            curr.expiration,
+        )?;
+
+        messages.push(resp);
+    }
     resolver(deps.storage).save(key, &record)?;
-    Ok(Response::default())
+    Ok(Response::new().add_messages(messages))
 }
 pub fn withdraw_fees(
     info: MessageInfo,

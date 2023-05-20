@@ -141,3 +141,13 @@ pub fn get_name_body(name: String) -> String {
     let body = &name[0..suffix_index];
     String::from(body)
 }
+pub fn get_subdomain_prefix(name: String)-> Option<Vec<String>> {
+    let body=get_name_body(name);
+    let components:Vec<_>=body.split('.').collect();
+    match components.len(){
+        1=> None,
+        2=>Some(vec![String::from(components[0]),String::from(components[1])]),
+        _=> None
+    }
+
+}
