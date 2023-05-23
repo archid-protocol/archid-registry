@@ -6,5 +6,5 @@ pub mod msg;
 pub mod read_utils;
 pub mod state;
 pub mod write_utils;
-
+pub mod handlers;
 pub use crate::error::ContractError;
