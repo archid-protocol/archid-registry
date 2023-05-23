@@ -2,11 +2,12 @@ use crate::error::ContractError;
 use crate::handlers::{
     execute_extend_subdomain_expiry, execute_register, execute_renew_registration,
     execute_set_subdomain, execute_update_config, execute_update_resolver, execute_withdraw_fees,
+    execute_user_metadata_update,execute_remove_subdomain
 };
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::read_utils::{format_name, query_resolver, query_resolver_expiration};
 use crate::state::{config, config_read, Config};
-use crate::write_utils::{remove_subdomain, user_metadata_update_handler};
+
 use archid_token::Metadata;
 
 use cosmwasm_std::{
@@ -79,14 +80,14 @@ pub fn execute(
         ExecuteMsg::UpdateUserDomainData {
             name,
             metadata_update,
-        } => user_metadata_update_handler(info, deps, format_name(name), metadata_update),
+        } => execute_user_metadata_update(info, deps, format_name(name), metadata_update),
 
         ExecuteMsg::UpdateConfig { config } => execute_update_config(deps, env, info, config),
 
         ExecuteMsg::Withdraw { amount } => execute_withdraw_fees(info, deps, amount),
 
         ExecuteMsg::RemoveSubdomain { domain, subdomain } => {
-            remove_subdomain(info, deps, env, format_name(domain), subdomain)
+            execute_remove_subdomain(info, deps, env, format_name(domain), subdomain)
         }
     }
 }

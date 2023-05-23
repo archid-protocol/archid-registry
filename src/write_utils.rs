@@ -1,13 +1,12 @@
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult,
-    Uint128, WasmMsg,
+    to_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, StdResult,
+    Uint128, WasmMsg,Env
 };
 
-use crate::error::ContractError;
-use crate::msg::MetaDataUpdateMsg;
+
 use crate::read_utils::get_name_body;
-use crate::read_utils::{is_expired, query_current_metadata, query_name_owner};
-use crate::state::{config_read, resolver, Config, NameRecord};
+use crate::read_utils::{ query_current_metadata};
+use crate::state::{ resolver, NameRecord};
 use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, Subdomain, UpdateMetadataMsg,
 };
@@ -46,7 +45,7 @@ pub fn update_subdomain_metadata(
     resolver: Addr,
     expiry: u64,
 ) -> StdResult<CosmosMsg> {
-    let mut current_metadata: Metadata = query_current_metadata(&domain, cw721, deps).unwrap();
+    let mut current_metadata: Metadata = query_current_metadata(domain, cw721, deps).unwrap();
     let mut subdomains: Vec<Subdomain> = current_metadata.subdomains.as_ref().unwrap().clone();
     let index = subdomains
         .iter()
@@ -56,7 +55,7 @@ pub fn update_subdomain_metadata(
     subdomains[index].minted = None;
     subdomains[index].resolver = Some(resolver);
     current_metadata.subdomains = Some((*subdomains).to_vec());
-    let resp = send_data_update(&domain, cw721, current_metadata)?;
+    let resp = send_data_update(domain, cw721, current_metadata)?;
     Ok(resp)
 }
 pub fn update_subdomain_expiry(
@@ -173,63 +172,6 @@ pub fn burn_handler(name: &String, cw721: &Addr) -> StdResult<CosmosMsg> {
     Ok(resp)
 }
 
-pub fn user_metadata_update_handler(
-    info: MessageInfo,
-    deps: DepsMut,
-    name: String,
-    update: MetaDataUpdateMsg,
-) -> Result<Response, ContractError> {
-    let c: Config = config_read(deps.storage).load()?;
-    let cw721 = c.cw721;
-    let owner_response = query_name_owner(&name, &cw721, &deps).unwrap();
-
-    if owner_response.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-    let current_metadata: Metadata = query_current_metadata(&name, &cw721, &deps).unwrap();
-    let new_metadata = Metadata {
-        description: update.clone().description,
-        name: Some(name.clone()),
-        image: update.clone().image,
-        created: current_metadata.created,
-        expiry: current_metadata.expiry,
-        domain: current_metadata.domain,
-        subdomains: current_metadata.subdomains,
-        accounts: update.accounts,
-        websites: update.websites,
-    };
-    let resp = send_data_update(&name, &cw721, new_metadata);
-    Ok(Response::new().add_message(resp.unwrap()))
-}
-
-pub fn remove_subdomain(
-    info: MessageInfo,
-    deps: DepsMut,
-    env: Env,
-    domain: String,
-    subdomain: String,
-) -> Result<Response, ContractError> {
-    let c: Config = config_read(deps.storage).load()?;
-    let domain_route = format!("{}.{}", subdomain, domain);
-    let key = domain_route.as_bytes();
-    let mut messages = Vec::new();
-
-    let owner_response = query_name_owner(&domain, &c.cw721, &deps).unwrap();
-    resolver(deps.storage).remove(key);
-    if owner_response.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-    let subdomain_owner = query_name_owner(&domain_route, &c.cw721, &deps).unwrap();
-    // if owner of the minted subdomain is not owner of the top level domain
-    // and subdomain is not expired
-    if !is_expired(&deps, key, &env.block) && subdomain_owner.owner != info.sender {
-        return Err(ContractError::NameTaken { name: domain_route });
-    }
-    messages.push(remove_subdomain_metadata(&deps, &c.cw721, domain, subdomain).unwrap());
-    messages.push(burn_handler(&domain_route, &c.cw721)?);
-    Ok(Response::new().add_messages(messages))
-}
-
 pub fn send_tokens(to: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
     let msg = BankMsg::Send {
         to_address: to.into(),
@@ -254,4 +196,96 @@ pub fn send_data_update(name: &String, cw721: &Addr, data: Metadata) -> StdResul
     }
     .into();
     Ok(resp)
+}
+pub fn update_metadata_expiry(
+    deps: DepsMut,
+    cw721: &Addr,
+    name: String,
+    expiration: u64,
+) -> StdResult<CosmosMsg> {
+    let mut current_metadata: Metadata = query_current_metadata(&name, cw721, &deps).unwrap();
+    current_metadata.expiry = Some(expiration);
+    let resp = send_data_update(&name, cw721, current_metadata)?;
+    Ok(resp)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn register_new_subdomain(
+    nft: Addr,
+    deps: DepsMut,
+    env: Env,
+    domain: String,
+    subdomain: String,
+    new_resolver: Addr,
+    new_owner: Addr,
+    expiration: u64,
+) -> StdResult<Vec<CosmosMsg>> {
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let mut messages = Vec::new();
+    let created = env.block.time.seconds();
+
+    let metadata_msg = add_subdomain_metadata(
+        &deps,
+        &nft,
+        domain,
+        subdomain,
+        new_resolver.clone(),
+        env.block.time.seconds(),
+        expiration,
+    )?;
+    messages.push(metadata_msg);
+    let record = NameRecord {
+        resolver: new_resolver,
+        created,
+        expiration,
+    };
+    resolver(deps.storage).save(key, &record)?;
+
+    let resp = mint_handler(&domain_route, &new_owner, &nft, created, expiration)?;
+    messages.push(resp);
+
+    Ok(messages)
+}
+// can be used to mint and update resolver for non minted
+
+#[allow(clippy::too_many_arguments)]
+pub fn burn_remint_subdomain(
+    deps: DepsMut,
+    nft: Addr,
+    env: Env,
+    domain: String,
+    subdomain: String,
+    new_resolver: Addr,
+    new_owner: Addr,
+    expiration: u64,
+) -> StdResult<Vec<CosmosMsg>> {
+    let domain_route: String = format!("{}.{}", subdomain, domain);
+    let key = domain_route.as_bytes();
+    let mut messages = Vec::new();
+    let created = env.block.time.seconds();
+    let burn_msg = burn_handler(&format!("{}.{}", subdomain, domain), &nft)?;
+    messages.push(burn_msg);
+
+    let metadata_msg = add_subdomain_metadata(
+        &deps,
+        &nft,
+        domain,
+        subdomain,
+        new_resolver.clone(),
+        env.block.time.seconds(),
+        expiration,
+    )?;
+    messages.push(metadata_msg);
+    let record = NameRecord {
+        resolver: new_resolver,
+        created,
+        expiration,
+    };
+    resolver(deps.storage).save(key, &record)?;
+
+    let resp = mint_handler(&domain_route, &new_owner, &nft, created, expiration)?;
+    messages.push(resp);
+
+    Ok(messages)
 }
