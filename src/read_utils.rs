@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env,BlockInfo, QueryRequest, StdError, StdResult, WasmQuery,
+    to_binary, Addr, Binary, BlockInfo, Deps, DepsMut, Env, QueryRequest, StdError, StdResult,
+    WasmQuery,
 };
 
 use archid_token::{Extension, Metadata, QueryMsg as Cw721QueryMsg};
@@ -7,7 +8,7 @@ use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use crate::error::ContractError;
 use crate::msg::{RecordExpirationResponse, ResolveRecordResponse};
-use crate::state::{resolver_read};
+use crate::state::resolver_read;
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
@@ -74,12 +75,12 @@ fn invalid_char(c: char) -> bool {
     !is_valid
 }
 
-pub fn is_expired(deps:&DepsMut,key:&[u8],block: &BlockInfo)->bool{
-    let r=resolver_read(deps.storage).may_load(key).unwrap();
-    match r.is_some(){
-        true=>r.unwrap().is_expired(block),
-        _=>true
-    }    
+pub fn is_expired(deps: &DepsMut, key: &[u8], block: &BlockInfo) -> bool {
+    let r = resolver_read(deps.storage).may_load(key).unwrap();
+    match r.is_some() {
+        true => r.unwrap().is_expired(block),
+        _ => true,
+    }
 }
 
 /// validate_name returns an error if the name is invalid
@@ -110,7 +111,6 @@ pub fn validate_name(name: &str) -> Result<(), ContractError> {
 }
 pub fn validate_subdomain(name: &str) -> Result<(), ContractError> {
     let length = name.len() as u64;
-
     if (name.len() as u64) < MIN_NAME_LENGTH {
         Err(ContractError::NameTooShort {
             length,
@@ -141,13 +141,15 @@ pub fn get_name_body(name: String) -> String {
     let body = &name[0..suffix_index];
     String::from(body)
 }
-pub fn get_subdomain_prefix(name: String)-> Option<Vec<String>> {
-    let body=get_name_body(name);
-    let components:Vec<_>=body.split('.').collect();
-    match components.len(){
-        1=> None,
-        2=>Some(vec![String::from(components[0]),String::from(components[1])]),
-        _=> None
+pub fn get_subdomain_prefix(name: String) -> Option<Vec<String>> {
+    let body = get_name_body(name);
+    let components: Vec<_> = body.split('.').collect();
+    match components.len() {
+        1 => None,
+        2 => Some(vec![
+            String::from(components[0]),
+            String::from(components[1]),
+        ]),
+        _ => None,
     }
-
 }
