@@ -65,6 +65,36 @@
     {
       "type": "object",
       "required": [
+        "extend_subdomain_expiry"
+      ],
+      "properties": {
+        "extend_subdomain_expiry": {
+          "type": "object",
+          "required": [
+            "domain",
+            "expiration",
+            "subdomain"
+          ],
+          "properties": {
+            "domain": {
+              "type": "string"
+            },
+            "expiration": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "subdomain": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "update_resolver"
       ],
       "properties": {
@@ -89,15 +119,14 @@
     {
       "type": "object",
       "required": [
-        "register_sub_domain"
+        "register_subdomain"
       ],
       "properties": {
-        "register_sub_domain": {
+        "register_subdomain": {
           "type": "object",
           "required": [
             "domain",
             "expiration",
-            "mint",
             "new_owner",
             "new_resolver",
             "subdomain"
@@ -110,9 +139,6 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
-            },
-            "mint": {
-              "type": "boolean"
             },
             "new_owner": {
               "$ref": "#/definitions/Addr"
@@ -131,10 +157,10 @@
     {
       "type": "object",
       "required": [
-        "remove_sub_domain"
+        "remove_subdomain"
       ],
       "properties": {
-        "remove_sub_domain": {
+        "remove_subdomain": {
           "type": "object",
           "required": [
             "domain",
@@ -175,10 +201,10 @@
     {
       "type": "object",
       "required": [
-        "updata_user_domain_data"
+        "update_user_domain_data"
       ],
       "properties": {
-        "updata_user_domain_data": {
+        "update_user_domain_data": {
           "type": "object",
           "required": [
             "metadata_update",
