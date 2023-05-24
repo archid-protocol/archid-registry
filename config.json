@@ -16,6 +16,34 @@
       {
         "project": "archid-registry",
         "type": "set-metadata",
+        "chainId": "constantine-3",
+        "codeId": 56,
+        "txhash": "AB85AC8ED0DFD8A1CE159E1905BE50DA10FA7441A1A4968AB390686AD00E1FC6",
+        "contract": "archway1fphguznhazgqdlr9mpfh6nmn3vjjr73ksz3ukznv6q7s9ndfq2csu76f3s",
+        "contractMetadata": {
+          "ownerAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq",
+          "rewardsAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "constantine-3",
+        "codeId": 56,
+        "txhash": "A925D1054FD3AAE66542A482029B7B99EE67A29D8594F9DD3C5E8A0223C1B8A1",
+        "address": "archway1fphguznhazgqdlr9mpfh6nmn3vjjr73ksz3ukznv6q7s9ndfq2csu76f3s",
+        "admin": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "constantine-3",
+        "codeId": 56,
+        "txhash": "F72E9583FC5C7F8F81BA76A61599130D31027BCB11667619BF44040F4680623E"
+      },
+      {
+        "project": "archid-registry",
+        "type": "set-metadata",
         "chainId": "constantine-1",
         "codeId": 296,
         "txhash": "96AA41E3D4568485BCC3478F605C138B50D724EFF2227454296147704EB88E15",
@@ -374,30 +402,27 @@
   },
   "network": {
     "name": "constantine",
-    "chainId": "constantine-1",
+    "chainId": "constantine-3",
     "type": "testnet",
     "fees": {
-      "feeDenom": "uconst"
+      "feeDenom": "aconst"
     },
     "gas": {
-      "prices": "0.002uconst",
+      "prices": "0.002aconst",
       "mode": "auto",
-      "adjustment": "1.3"
+      "adjustment": "1.5"
     },
     "wasm": {
       "bech32Hrp": "archway",
-      "archwayd": "0.0.5",
+      "archwayd": "0.1.0",
       "configDir": ".archway",
       "binary": "archwayd"
     },
     "urls": {
       "rpc": {
-        "url": "https://rpc.constantine-1.archway.tech",
+        "url": "https://rpc.constantine.archway.tech",
         "port": 443
-      },
-      "faucets": [
-        "https://faucet.torii-1.archway.tech"
-      ]
+      }
     }
   }
 }
