@@ -59,11 +59,10 @@ pub fn execute_register(
     let mint_resp = mint_handler(&name, &info.sender, &c.cw721, created, expiration)?;
     messages.push(mint_resp);
     resolver(deps.storage).save(key, &record)?;
-    let mut response = Response::new();
-    response = response.add_messages(messages);
-    response = response.add_attribute("action", "register");
-    response = response.add_attribute("domain", name);
-    Ok(response)
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("action", "register")
+        .add_attribute("domain", name))
 }
 
 pub fn execute_renew_registration(
@@ -107,11 +106,11 @@ pub fn execute_renew_registration(
         name.clone(),
         c.base_expiration + curr.expiration,
     );
-    let mut response = Response::new();
-    response = response.add_messages(resp);
-    response = response.add_attribute("action", "rewew_registeration");
-    response = response.add_attribute("domain", name);
-    Ok(response)
+
+    Ok(Response::new()
+        .add_messages(resp)
+        .add_attribute("action", "renew_registration")
+        .add_attribute("domain", name))
 }
 /**
 subdomain rules
@@ -204,12 +203,11 @@ pub fn execute_set_subdomain(
         ),
         SubDomainStatus::ExistingMintActive => return Err(ContractError::Unauthorized {}),
     };
-    let mut response = Response::new();
-    response = response.add_messages(messages.unwrap());
-    response = response.add_attribute("action", "set_subdomain");
-    response = response.add_attribute("domain", domain);
-    response = response.add_attribute("subdomain", subdomain);
-    Ok(response)
+    Ok(Response::new()
+        .add_messages(messages.unwrap())
+        .add_attribute("action", "set_subdomain")
+        .add_attribute("domain", domain)
+        .add_attribute("subdomain", subdomain))
 }
 
 pub fn execute_extend_subdomain_expiry(
@@ -261,11 +259,11 @@ pub fn execute_extend_subdomain_expiry(
         false => expiration,
     };
     let messages = update_subdomain_expiry(c.cw721, deps, domain, subdomain, _expiration)?;
-    let mut response = Response::new();
-    response = response.add_messages(messages);
-    response = response.add_attribute("action", "extend_subdomain_expiry");
-    response = response.add_attribute("domain", domain_route);
-    Ok(response)
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("action", "extend_subdomain_expiry")
+        .add_attribute("domain", domain_route))
 }
 
 // add reregister function so owners can extend their
@@ -323,11 +321,10 @@ pub fn execute_update_resolver(
         messages.push(resp);
     }
     resolver(deps.storage).save(key, &record)?;
-    let mut response = Response::new();
-    response = response.add_messages(messages);
-    response = response.add_attribute("action", "update_resolver");
-    response = response.add_attribute("domain", name);
-    Ok(response)
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("action", "update_resolver")
+        .add_attribute("domain", name))
 }
 pub fn execute_withdraw_fees(
     info: MessageInfo,
@@ -368,11 +365,10 @@ pub fn execute_user_metadata_update(
         websites: update.websites,
     };
     let resp = send_data_update(&name, &cw721, new_metadata);
-    let mut response = Response::new();
-    response = response.add_messages(resp);
-    response = response.add_attribute("action", "metadata_update");
-    response = response.add_attribute("domain", name);
-    Ok(response)
+    Ok(Response::new()
+        .add_messages(resp)
+        .add_attribute("action", "metadata_update")
+        .add_attribute("domain", name))
 }
 pub fn execute_remove_subdomain(
     info: MessageInfo,
@@ -397,14 +393,17 @@ pub fn execute_remove_subdomain(
     if !is_expired(&deps, key, &env.block) && subdomain_owner.owner != info.sender {
         return Err(ContractError::NameTaken { name: domain_route });
     }
-    messages.push(
-        remove_subdomain_metadata(&deps, &c.cw721, domain.clone(), subdomain.clone())?,
-    );
+    messages.push(remove_subdomain_metadata(
+        &deps,
+        &c.cw721,
+        domain.clone(),
+        subdomain.clone(),
+    )?);
     messages.push(burn_handler(&domain_route, &c.cw721)?);
-    let mut response = Response::new();
-    response = response.add_messages(messages);
-    response = response.add_attribute("action", "remove_subdomain");
-    response = response.add_attribute("domain", domain);
-    response = response.add_attribute("subdomain", subdomain);
-    Ok(response)
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("action", "remove_subdomain")
+        .add_attribute("domain", domain)
+        .add_attribute("subdomain", subdomain))
 }
