@@ -590,7 +590,6 @@ fn test_remint_subdomain() {
     let name_owner = Addr::unchecked("mintnames");
     let name_owner2 = Addr::unchecked("mintothernames");
     let mock = Addr::unchecked("testtesttest");
-    let domain_owner = Addr::unchecked("domain_owner");
     mint_native(
         &mut app,
         name_owner.to_string(),
@@ -630,7 +629,7 @@ fn test_remint_subdomain() {
         name: String::from("simpletest"),
     };
 
-    app.execute_contract(
+    let result = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &register_msg,
@@ -639,7 +638,8 @@ fn test_remint_subdomain() {
             amount: Uint128::from(5000u128),
         }],
     );
-    let mut current_time = get_block_time(&mut app);
+    assert!(result.is_ok());
+    let current_time = get_block_time(&mut app);
     let subdomain_msg = ExecuteMsg::RegisterSubdomain {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
@@ -656,12 +656,13 @@ fn test_remint_subdomain() {
 
         expiration: current_time + 93200,
     };
-    app.execute_contract(
+    let second_result = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg,
         &[],
     );
+    assert!(second_result.is_ok());
     let remove_sudomain_msg = ExecuteMsg::RemoveSubdomain {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
@@ -690,7 +691,7 @@ fn test_remint_subdomain() {
         new_owner: name_owner.clone(),
         expiration: current_time + 43200,
     };
-    let rrr = app.execute_contract(
+    let _rrr = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg_bad,
@@ -703,27 +704,27 @@ fn test_remint_subdomain() {
             &[],
         )
         .is_err());
-    let extendMsg= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time + 91200 };
+    let extend_msg= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time + 91200 };
     // non domain owner cannot extend
     assert!(app.execute_contract(
         name_owner2.clone(),
         name_service.clone(),
-        &extendMsg,
+        &extend_msg,
         &[],
     ).is_err());
     assert!(app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
-        &extendMsg,
+        &extend_msg,
         &[],
     ).is_ok());
     
-    let extendMsgBad= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time  };
-    //Bad Expiration time. TGo early
+    let extend_msg_bad= ExecuteMsg::ExtendSubdomainExpiry { domain:  String::from("simpletest"), subdomain: String::from("subdomain"), expiration: current_time  };
+    // Bad Expiration time. Too early
     assert!(app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
-        &extendMsgBad,
+        &extend_msg_bad,
         &[],
     ).is_err());
 }
