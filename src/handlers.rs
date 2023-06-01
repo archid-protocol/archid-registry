@@ -94,8 +94,7 @@ pub fn execute_renew_registration(
         expiration: c.base_expiration + curr.expiration,
     };
 
-    // let res = must_pay(&info, &String::from("ARCH"))?;
-    let res = must_pay(&info, &String::from("uconst"))?;
+    let res = must_pay(&info, &String::from(DENOM))?;
     if res != c.base_cost {
         return Err(ContractError::InvalidPayment { amount: res });
     }
