@@ -2,15 +2,27 @@
 
 **Deployed contract (constantine-3)**: 
 
-[archway1fphguznhazgqdlr9mpfh6nmn3vjjr73ksz3ukznv6q7s9ndfq2csu76f3s](https://testnet.mintscan.io/archway-testnet/txs/A925D1054FD3AAE66542A482029B7B99EE67A29D8594F9DD3C5E8A0223C1B8A1)
+[archway1lr8rstt40s697hqpedv2nvt27f4cuccqwvly9gnvuszxmcevrlns60xw4r](https://testnet.mintscan.io/archway-testnet/txs/2E6CB87501E630D864DEA312D5814BF93ED4C7E87A6C8993BA640615CA016D11)
 
 
 **Register name**:
 ```bash
-archway tx --args '{ "register": {"name": "alex"}}'
+# Using Archway Developer CLI
+archway tx --args '{ "register": {"name": "archid"}}'
+```
+
+```bash
+# Using archwayd
+ archwayd tx wasm execute archway1lr8rstt40s697hqpedv2nvt27f4cuccqwvly9gnvuszxmcevrlns60xw4r '{"register": {"name": "archid"}}' --from keplr --chain-id "constantine-3" --node "https://rpc.constantine.archway.tech:443" --broadcast-mode sync --output json -y --gas-prices $(archwayd q rewards estimate-fees 1 --node 'https://rpc.constantine.archway.tech:443' --output json | jq -r '.gas_unit_price | (.amount + .denom)')
 ```
 
 **Resolve record**:
 ```bash
- archwayd tx wasm execute archway1fphguznhazgqdlr9mpfh6nmn3vjjr73ksz3ukznv6q7s9ndfq2csu76f3s '{"register": {"name": "archid"}}' --from keplr --chain-id "constantine-3" --node "https://rpc.constantine.archway.tech:443" --broadcast-mode sync --output json -y --gas-prices $(archwayd q rewards estimate-fees 1 --node 'https://rpc.constantine.archway.tech:443' --output json | jq -r '.gas_unit_price | (.amount + .denom)')
+# Using Archway Developer CLI
+archway query contract-state smart --args '{"resolve_record": { "name": "archid.arch" }}'
+```
+
+```bash
+# Using archwayd
+archwayd query wasm contract-state smart "archway1lr8rstt40s697hqpedv2nvt27f4cuccqwvly9gnvuszxmcevrlns60xw4r" '{"resolve_record": { "name": "archid.arch" }}' --node "https://rpc.constantine.archway.tech:443"
 ```
