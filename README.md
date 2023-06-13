@@ -1,4 +1,4 @@
-## Archway Nameservice
+## ArchID Name Service for Archway Network
 
 **Deployed contract (constantine-3)**: 
 
