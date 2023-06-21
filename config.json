@@ -15,6 +15,13 @@
     "deployments": [
       {
         "project": "archid-registry",
+        "type": "store",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 96,
+        "txhash": "3CAD9DD22C9658C2CB0B6ABE5E5500BD61D20D8FC7EA5280A1D60676F673D2AD"
+      },
+      {
+        "project": "archid-registry",
         "type": "set-metadata",
         "chainId": "constantine-3",
         "codeId": 96,
