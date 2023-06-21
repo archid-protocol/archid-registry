@@ -17,6 +17,13 @@
         "project": "archid-registry",
         "type": "store",
         "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "A2F05CDF3A972A8AF96AF1367E17525EDB047401B1B4BD5B09AB179E54223585"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "mainnet-dry-run-2",
         "codeId": 96,
         "txhash": "3CAD9DD22C9658C2CB0B6ABE5E5500BD61D20D8FC7EA5280A1D60676F673D2AD"
       },
