@@ -15,6 +15,27 @@
     "deployments": [
       {
         "project": "archid-registry",
+        "type": "set-metadata",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "ECE31605779F12DFFE4DD2B38D16A3B0B3265CB08441DFF5F88042D4383C4961",
+        "contract": "archway15ndx69jvdmr9cqvm0pvx32ty3u0845x32fzgh9e8d8wcc9putucqv355da",
+        "contractMetadata": {
+          "ownerAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq",
+          "rewardsAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "C3E7DAAF35A111868DF0B375634CD600B4FCF9762D06B5A0BCA481EB509BE2DD",
+        "address": "archway15ndx69jvdmr9cqvm0pvx32ty3u0845x32fzgh9e8d8wcc9putucqv355da",
+        "admin": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+      },
+      {
+        "project": "archid-registry",
         "type": "store",
         "chainId": "mainnet-dry-run-2",
         "codeId": 97,
