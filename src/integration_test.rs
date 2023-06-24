@@ -331,8 +331,8 @@ fn basic_domain_test() {
         }
     )
     .unwrap();
-    println!("Name records owned by {:?}: {:?}", &name_owner, &records_of_owner);
-    // assert_eq!(records_of_owner.names.unwrap().len(), 1);
+    // println!("Name records owned by {:?}: {:?}", &name_owner, &records_of_owner);
+    assert_eq!(records_of_owner.names.unwrap().len(), 1);
 }
 
 #[test]
