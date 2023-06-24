@@ -30,11 +30,11 @@ pub fn query_name_owner(
     Ok(res)
 }
 
-pub fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
+pub fn query_resolver(deps: Deps, env: Env, name: String) -> StdResult<Binary> {
     let key = name.as_bytes();
     let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
 
-    let address = match curr.is_expired(&_env.block) {
+    let address = match curr.is_expired(&env.block) {
         true => None,
         false => Some(String::from(&curr.resolver)),
     };
@@ -56,7 +56,7 @@ pub fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResu
     to_binary(&resp)
 }
 
-pub fn query_resolver_address(deps: Deps, _env: Env, address: Addr) -> StdResult<Binary> {
+pub fn query_resolver_address(deps: Deps, env: Env, address: Addr) -> StdResult<Binary> {
     let curr: StdResult<Vec<Record<NameRecord>>> = 
         resolver_read(deps.storage)
             .range(None, None, Order::Ascending)
@@ -71,8 +71,16 @@ pub fn query_resolver_address(deps: Deps, _env: Env, address: Addr) -> StdResult
             .collect::<Vec<Record<NameRecord>>>()
     );
     
+    let unexpired_names = Some(
+        names
+            .unwrap()
+            .into_iter()
+            .filter(|(_i, record)| !record.is_expired(&env.block))
+            .collect::<Vec<Record<NameRecord>>>()
+    );
+
     let resp = ResolveAddressResponse {
-        names,
+        names: unexpired_names,
     };
     to_binary(&resp)
 }
