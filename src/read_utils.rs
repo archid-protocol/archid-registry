@@ -1,14 +1,14 @@
 use cosmwasm_std::{
-    to_binary, Addr, Binary, BlockInfo, Deps, DepsMut, Env, QueryRequest, StdError, StdResult,
-    WasmQuery,
+    to_binary, Addr, Binary, BlockInfo, Deps, DepsMut, Env, Order, QueryRequest, 
+    Record, StdError, StdResult, WasmQuery,
 };
 
 use archid_token::{Extension, Metadata, QueryMsg as Cw721QueryMsg};
 use cw721_updatable::{NftInfoResponse, OwnerOfResponse};
 
 use crate::error::ContractError;
-use crate::msg::{RecordExpirationResponse, ResolveRecordResponse};
-use crate::state::resolver_read;
+use crate::msg::{ResolveAddressResponse, RecordExpirationResponse, ResolveRecordResponse,};
+use crate::state::{NameRecord, resolver_read};
 
 const MIN_NAME_LENGTH: u64 = 3;
 const MAX_NAME_LENGTH: u64 = 64;
@@ -45,12 +45,34 @@ pub fn query_resolver(deps: Deps, _env: Env, name: String) -> StdResult<Binary> 
     };
     to_binary(&resp)
 }
+
 pub fn query_resolver_expiration(deps: Deps, _env: Env, name: String) -> StdResult<Binary> {
     let key = name.as_bytes();
     let curr = (resolver_read(deps.storage).may_load(key)?).unwrap();
     let resp = RecordExpirationResponse {
         created: curr.created,
         expiration: curr.expiration,
+    };
+    to_binary(&resp)
+}
+
+pub fn query_resolver_address(deps: Deps, _env: Env, address: Addr) -> StdResult<Binary> {
+    let curr: StdResult<Vec<Record<NameRecord>>> = 
+        resolver_read(deps.storage)
+            .range(None, None, Order::Ascending)
+            .collect();
+
+    let records = curr.unwrap();
+    
+    let names = Some(
+        records
+            .into_iter()
+            .filter(|(_i, record)| record.resolver == address)
+            .collect::<Vec<Record<NameRecord>>>()
+    );
+    
+    let resp = ResolveAddressResponse {
+        names,
     };
     to_binary(&resp)
 }

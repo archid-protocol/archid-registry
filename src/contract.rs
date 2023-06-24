@@ -5,7 +5,7 @@ use crate::handlers::{
     execute_user_metadata_update,execute_remove_subdomain
 };
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::read_utils::{format_name, query_resolver, query_resolver_expiration};
+use crate::read_utils::{format_name, query_resolver, query_resolver_address, query_resolver_expiration};
 use crate::state::{config, config_read, Config};
 
 use archid_token::Metadata;
@@ -95,6 +95,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ResolveRecord { name } => query_resolver(deps, env, name),
+        QueryMsg::ResolveAddress { address } => query_resolver_address(deps, env, address),
         QueryMsg::RecordExpiration { name } => query_resolver_expiration(deps, env, name),
         QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
     }

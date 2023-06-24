@@ -1,6 +1,6 @@
-use crate::state::Config;
+use crate::state::{Config, NameRecord};
 use archid_token::{Account, Website};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Record, Uint128};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -65,6 +65,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     ResolveRecord { name: String },
     RecordExpiration { name: String },
+    ResolveAddress { address: Addr },
     Config {},
 }
 
@@ -72,6 +73,10 @@ pub enum QueryMsg {
 pub struct ResolveRecordResponse {
     pub address: Option<String>,
     pub expiration: u64,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct ResolveAddressResponse {
+    pub names: Option<Vec<Record<NameRecord>>>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct RecordExpirationResponse {
