@@ -33,7 +33,7 @@ pub fn add_subdomain_metadata(
         expiry: Some(expiry),
     });
     current_metadata.subdomains = Some((*subdomains).to_vec());
-    println!("{:?}", &current_metadata);
+    // println!("{:?}", &current_metadata);
     let resp = send_data_update(&name, cw721, current_metadata)?;
     Ok(resp)
 }

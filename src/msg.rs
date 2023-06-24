@@ -1,6 +1,6 @@
-use crate::state::{Config, NameRecord};
+use crate::state::{Config};
 use archid_token::{Account, Website};
-use cosmwasm_std::{Addr, Record, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,8 @@ pub struct ResolveRecordResponse {
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ResolveAddressResponse {
-    pub names: Option<Vec<Record<NameRecord>>>,
+    // pub names: Option<Vec<Record<NameRecord>>>,
+    pub names: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct RecordExpirationResponse {

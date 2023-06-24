@@ -79,8 +79,13 @@ pub fn query_resolver_address(deps: Deps, env: Env, address: Addr) -> StdResult<
             .collect::<Vec<Record<NameRecord>>>()
     );
 
+    let mut output_names = vec![];
+    for (key, _record) in unexpired_names.unwrap().into_iter() {
+        output_names.push(String::from_utf8(key).unwrap());
+    }
+
     let resp = ResolveAddressResponse {
-        names: unexpired_names,
+        names: Some(output_names.clone()),
     };
     to_binary(&resp)
 }

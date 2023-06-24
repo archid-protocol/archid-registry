@@ -11,7 +11,8 @@ use archid_token::{
 use cw721_updatable::{NftInfoResponse, NumTokensResponse, OwnerOfResponse};
 
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, ResolveRecordResponse,
+    ExecuteMsg, InstantiateMsg, QueryMsg, RecordExpirationResponse, 
+    ResolveAddressResponse, ResolveRecordResponse,
 };
 use crate::state::Config;
 use crate::write_utils::DENOM;
@@ -67,7 +68,6 @@ fn create_name_service(
     name_addr
 }
 fn create_cw721(router: &mut App, minter: &Addr) -> Addr {
-    //let contract = Cw721Contract::default();
     let cw721_id = router.store_code(contract_cw721());
     let msg = Cw721InstantiateMsg {
         name: "TESTNFT".to_string(),
@@ -142,7 +142,7 @@ fn basic_domain_test() {
     let update_msg = ExecuteMsg::UpdateConfig {
         config: update_config,
     };
-    print!("{}", "Starting QUERY");
+    // print!("{}", "Starting QUERY");
 
     let _config_update =
         app.execute_contract(owner.clone(), name_service.clone(), &update_msg, &[]);
@@ -185,14 +185,14 @@ fn basic_domain_test() {
         token_id: String::from("lolz.arch"),
         include_expired: None,
     };
-    print!("{}", "Starting QUERY");
+    // print!("{}", "Starting QUERY");
     let _total: NumTokensResponse = query(
         &mut app,
         nft.clone(),
         Cw721QueryMsg::<Extension>::NumTokens {},
     )
     .unwrap();
-    println!("{}", _total.count);
+    // println!("{}", _total.count);
 
     let _resolve: ResolveRecordResponse = query(
         &mut app,
@@ -215,13 +215,12 @@ fn basic_domain_test() {
         },
     )
     .unwrap();
-    println!("{:?}", expiration);
+    // println!("{:?}", expiration);
     let subdomain_msg = ExecuteMsg::RegisterSubdomain {
         domain: String::from("simpletest"),
         subdomain: String::from("dapp"),
         new_resolver: mock.clone(),
         new_owner: mock.clone(),
-
         expiration: expiration.expiration,
     };
     let _res2 = app.execute_contract(
@@ -230,7 +229,7 @@ fn basic_domain_test() {
         &subdomain_msg,
         &[],
     );
-    println!("First subdomain execute {:?}", _res2);
+    // println!("First subdomain execute {:?}", _res2);
     let _subresolve: ResolveRecordResponse = query(
         &mut app,
         name_service.clone(),
@@ -323,6 +322,17 @@ fn basic_domain_test() {
     .unwrap();
     assert_eq!(total2.count, 3);
     // dbg!(total2.count);
+
+    let records_of_owner: ResolveAddressResponse = query(
+        &mut app,
+        name_service.clone(),
+        QueryMsg::ResolveAddress {
+            address: name_owner.clone(),
+        }
+    )
+    .unwrap();
+    println!("Name records owned by {:?}: {:?}", &name_owner, &records_of_owner);
+    // assert_eq!(records_of_owner.names.unwrap().len(), 1);
 }
 
 #[test]
@@ -667,23 +677,23 @@ fn test_remint_subdomain() {
         domain: String::from("simpletest"),
         subdomain: String::from("subdomain"),
     };
-    println!("{:?}", "REMOVING!!!");
-    let rr = app.execute_contract(
+    // println!("{:?}", "REMOVING!!!");
+    let _rr = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &remove_sudomain_msg,
         &[],
     );
-    println!("{:?}", rr);
-    println!("{:?}", "MINTING!!!");
-    let r = app.execute_contract(
+    // println!("{:?}", rr);
+    // println!("{:?}", "MINTING!!!");
+    let _r = app.execute_contract(
         name_owner.clone(),
         name_service.clone(),
         &subdomain_msg2,
         &[],
     );
-    println!("{:?}", "RESPT");
-    println!("{:?}", r);
+    // println!("{:?}", "RESPT");
+    // println!("{:?}", r);
     let subdomain_msg_bad = ExecuteMsg::RegisterSubdomain {
         domain: String::from("simpletest22"),
         subdomain: String::from("subdomain"),
