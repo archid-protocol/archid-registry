@@ -76,7 +76,6 @@ pub struct ResolveRecordResponse {
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ResolveAddressResponse {
-    // pub names: Option<Vec<Record<NameRecord>>>,
     pub names: Option<Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
