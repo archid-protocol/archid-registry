@@ -17,6 +17,34 @@
         "project": "archid-registry",
         "type": "set-metadata",
         "chainId": "constantine-3",
+        "codeId": 364,
+        "txhash": "2B7B8E4E6389FFA21D01D58E2ED0B9C92995C753DB539F9E5BC1F0BBF65A954A",
+        "contract": "archway1nzfv8usr6zycaxzzsu6l29xsufmjme7glxxgxmz0axrpmtuad6fspmamme",
+        "contractMetadata": {
+          "ownerAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq",
+          "rewardsAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "constantine-3",
+        "codeId": 364,
+        "txhash": "256D7631E0C1F40C86A567BCB72A558ACE19B0988FB02C0CFC658B65CF173279",
+        "address": "archway1nzfv8usr6zycaxzzsu6l29xsufmjme7glxxgxmz0axrpmtuad6fspmamme",
+        "admin": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "constantine-3",
+        "codeId": 364,
+        "txhash": "70403B4FBD5C9A51E5F299893F1A94C9B233D59C133DC1F3297D723A9307F045"
+      },
+      {
+        "project": "archid-registry",
+        "type": "set-metadata",
+        "chainId": "constantine-3",
         "codeId": 96,
         "txhash": "2E6CB87501E630D864DEA312D5814BF93ED4C7E87A6C8993BA640615CA016D11",
         "contract": "archway1lr8rstt40s697hqpedv2nvt27f4cuccqwvly9gnvuszxmcevrlns60xw4r",
