@@ -64,23 +64,18 @@ pub fn query_resolver_address(deps: Deps, env: Env, address: Addr) -> StdResult<
 
     let records = curr.unwrap();
     
-    let names = Some(
-        records
-            .into_iter()
-            .filter(|(_i, record)| record.resolver == address)
-            .collect::<Vec<Record<NameRecord>>>()
-    );
+    let names = records
+        .into_iter()
+        .filter(|(_i, record)| record.resolver == address)
+        .collect::<Vec<Record<NameRecord>>>();
     
-    let unexpired_names = Some(
-        names
-            .unwrap()
-            .into_iter()
-            .filter(|(_i, record)| !record.is_expired(&env.block))
-            .collect::<Vec<Record<NameRecord>>>()
-    );
+    let unexpired_names = names
+        .into_iter()
+        .filter(|(_i, record)| !record.is_expired(&env.block))
+        .collect::<Vec<Record<NameRecord>>>();
 
     let mut output_names = vec![];
-    for (key, _record) in unexpired_names.unwrap().into_iter() {
+    for (key, _record) in unexpired_names.into_iter() {
         output_names.push(String::from_utf8(key).unwrap());
     }
 
