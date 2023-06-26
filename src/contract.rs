@@ -14,7 +14,6 @@ use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
-// use cw2::{get_contract_version, set_contract_version, Version};
 use cw2::set_contract_version;
 
 pub type NameExtension = Option<Metadata>;
@@ -111,11 +110,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    // let version: Version = CONTRACT_VERSION.parse()?;
-    // let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
-    // if storage_version < version {
-    //     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    // }
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
