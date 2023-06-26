@@ -4,7 +4,7 @@ use crate::handlers::{
     execute_set_subdomain, execute_update_config, execute_update_resolver, execute_withdraw_fees,
     execute_user_metadata_update,execute_remove_subdomain
 };
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg};
 use crate::read_utils::{format_name, query_resolver, query_resolver_address, query_resolver_expiration};
 use crate::state::{config, config_read, Config};
 
@@ -14,7 +14,13 @@ use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
+// use cw2::{get_contract_version, set_contract_version, Version};
+use cw2::set_contract_version;
+
 pub type NameExtension = Option<Metadata>;
+
+const CONTRACT_NAME: &str = "crates.io:archid-registry";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -23,6 +29,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, StdError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let config_state = Config {
         admin: msg.admin,
         wallet: msg.wallet,
@@ -99,4 +107,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::RecordExpiration { name } => query_resolver_expiration(deps, env, name),
         QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    // let version: Version = CONTRACT_VERSION.parse()?;
+    // let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
+    // if storage_version < version {
+    //     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    // }
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }
