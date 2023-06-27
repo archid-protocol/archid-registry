@@ -11,7 +11,7 @@ use archid_token::{
     ExecuteMsg as Cw721ExecuteMsg, Metadata, MintMsg, Subdomain, UpdateMetadataMsg,
 };
 
-pub static DENOM: &str = "aconst";
+pub static DENOM: &str = "aarch";
 
 #[allow(clippy::too_many_arguments)]
 pub fn add_subdomain_metadata(

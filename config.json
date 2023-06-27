@@ -16,6 +16,69 @@
       {
         "project": "archid-registry",
         "type": "set-metadata",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "ECE31605779F12DFFE4DD2B38D16A3B0B3265CB08441DFF5F88042D4383C4961",
+        "contract": "archway15ndx69jvdmr9cqvm0pvx32ty3u0845x32fzgh9e8d8wcc9putucqv355da",
+        "contractMetadata": {
+          "ownerAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq",
+          "rewardsAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "C3E7DAAF35A111868DF0B375634CD600B4FCF9762D06B5A0BCA481EB509BE2DD",
+        "address": "archway15ndx69jvdmr9cqvm0pvx32ty3u0845x32fzgh9e8d8wcc9putucqv355da",
+        "admin": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 97,
+        "txhash": "A2F05CDF3A972A8AF96AF1367E17525EDB047401B1B4BD5B09AB179E54223585"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 96,
+        "txhash": "3CAD9DD22C9658C2CB0B6ABE5E5500BD61D20D8FC7EA5280A1D60676F673D2AD"
+      },
+      {
+        "project": "archid-registry",
+        "type": "set-metadata",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 94,
+        "txhash": "A6AA6D4EC5F9ABF289C984899635B409F078AAAC5745DCD4B7B00D72A34BDFE8",
+        "contract": "archway1pann3fw7e2jnaspkyd7cjl40m9e7gu90xmrzgrhr0rzwrf3tmvxsr357ve",
+        "contractMetadata": {
+          "ownerAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq",
+          "rewardsAddress": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 94,
+        "txhash": "7CC3658ABD83405EAED255D27CE4A6CD45B77FBAEFA8E2D52160E661871F7C6D",
+        "address": "archway1pann3fw7e2jnaspkyd7cjl40m9e7gu90xmrzgrhr0rzwrf3tmvxsr357ve",
+        "admin": "archway1f395p0gg67mmfd5zcqvpnp9cxnu0hg6r9hfczq"
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "mainnet-dry-run-2",
+        "codeId": 94,
+        "txhash": "63CAAD534109242DC180C5D9258C456DE442CEBE7F41E552B09A7DA978DD36E1"
+      },
+      {
+        "project": "archid-registry",
+        "type": "set-metadata",
         "chainId": "constantine-3",
         "codeId": 364,
         "txhash": "2B7B8E4E6389FFA21D01D58E2ED0B9C92995C753DB539F9E5BC1F0BBF65A954A",
@@ -457,14 +520,14 @@
     ]
   },
   "network": {
-    "name": "constantine",
-    "chainId": "constantine-3",
+    "name": "Archway",
+    "chainId": "mainnet-dry-run-2",
     "type": "testnet",
     "fees": {
-      "feeDenom": "aconst"
+      "feeDenom": "aarch"
     },
     "gas": {
-      "prices": "0.002aconst",
+      "prices": "0.002aarch",
       "mode": "auto",
       "adjustment": "1.5"
     },
@@ -476,7 +539,7 @@
     },
     "urls": {
       "rpc": {
-        "url": "https://rpc.constantine.archway.tech",
+        "url": "https://rpc.mainnet-dryrun-2.archway.tech",
         "port": 443
       }
     }
