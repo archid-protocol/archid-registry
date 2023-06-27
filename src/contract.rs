@@ -11,7 +11,8 @@ use crate::state::{config, config_read, Config};
 use archid_token::Metadata;
 
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, 
+    StdError, StdResult, SubMsgResult,
 };
 
 use cw2::{get_contract_version, set_contract_version};
@@ -105,6 +106,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ResolveAddress { address } => query_resolver_address(deps, env, address),
         QueryMsg::RecordExpiration { name } => query_resolver_expiration(deps, env, name),
         QueryMsg::Config {} => to_binary(&config_read(deps.storage).load()?),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.result {
+        SubMsgResult::Ok(_) => Ok(Response::default()),
+        SubMsgResult::Err(_) => Err(ContractError::Unauthorized {}),
     }
 }
 
