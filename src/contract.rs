@@ -120,10 +120,12 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let original_version = get_contract_version(deps.storage)?;
-    if original_version.contract != CONTRACT_NAME.to_string() {
+    let name = CONTRACT_NAME.to_string();
+    let version = CONTRACT_VERSION.to_string();
+    if original_version.contract != name {
         return Err(ContractError::InvalidInput {});
     }
-    if original_version.version >= CONTRACT_VERSION.to_string() {
+    if original_version.version >= version {
         return Err(ContractError::InvalidInput {});
     }
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
