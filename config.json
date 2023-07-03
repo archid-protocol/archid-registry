@@ -176,7 +176,7 @@
     },
     "wasm": {
       "bech32Hrp": "archway",
-      "archwayd": "0.1.0",
+      "archwayd": "1.0.0-rc.2",
       "configDir": ".archway",
       "binary": "archwayd"
     },
