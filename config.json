@@ -16,6 +16,43 @@
       {
         "project": "archid-registry",
         "type": "set-metadata",
+        "chainId": "archway-1",
+        "codeId": 9,
+        "txhash": "485EC908712CCDC0D65918F0E8E90E291D32720F2D0C691CCC055544B98C14A1",
+        "contract": "archway1275jwjpktae4y4y0cdq274a2m0jnpekhttnfuljm6n59wnpyd62qppqxq0",
+        "contractMetadata": {
+          "ownerAddress": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6",
+          "rewardsAddress": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6"
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "instantiate",
+        "chainId": "archway-1",
+        "codeId": 9,
+        "txhash": "2951FE20DC1FE4E0053AD26176DF19812D5430077F0F2769ED50B9BF4BB39721",
+        "address": "archway1275jwjpktae4y4y0cdq274a2m0jnpekhttnfuljm6n59wnpyd62qppqxq0",
+        "admin": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6",
+        "label": "archid-registry-v1",
+        "args": {
+          "admin": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6",
+          "wallet": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6",
+          "cw721": "archway1n7d4c52knwqqkw9j975ranknkp4fn3we0unrp6",
+          "base_cost": "1000000000000000000",
+          "base_expiration": 31536000
+        }
+      },
+      {
+        "project": "archid-registry",
+        "type": "store",
+        "chainId": "archway-1",
+        "codeId": 9,
+        "checksum": "6bbaf5517413936e3d88fdd1b4e5044a83e69ec088428cb58ff189ce3bdc9b23",
+        "txhash": "B6FACF0CD91EA6DCCDFE94D0A1080600FDB9E8F0F6EB5B6C787F0A8C21116782"
+      },
+      {
+        "project": "archid-registry",
+        "type": "set-metadata",
         "chainId": "mainnet-dry-run-2",
         "codeId": 97,
         "txhash": "ECE31605779F12DFFE4DD2B38D16A3B0B3265CB08441DFF5F88042D4383C4961",
