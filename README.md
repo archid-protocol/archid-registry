@@ -1,6 +1,9 @@
 ## ArchID Name Service for Archway Network
 
-**Deployed contract (constantine-3)**: 
+**Deployed mainnet contract (archway-1)**: 
+[archway1275jwjpktae4y4y0cdq274a2m0jnpekhttnfuljm6n59wnpyd62qppqxq0](https://www.mintscan.io/archway/txs/2951FE20DC1FE4E0053AD26176DF19812D5430077F0F2769ED50B9BF4BB39721)
+
+**Deployed testnet contract (constantine-3)**: 
 
 [archway1lr8rstt40s697hqpedv2nvt27f4cuccqwvly9gnvuszxmcevrlns60xw4r](https://testnet.mintscan.io/archway-testnet/txs/2E6CB87501E630D864DEA312D5814BF93ED4C7E87A6C8993BA640615CA016D11)
 
