@@ -21,7 +21,7 @@ checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
 name = "archid-registry"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "archid-token",
  "cosmwasm-schema",
@@ -39,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "archid-token"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-std",
  "cw2 0.11.1",
@@ -358,7 +358,7 @@ dependencies = [
 
 [[package]]
 name = "cw721-archid"
-version = "0.13.4"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 0.13.4",
@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "cw721-updatable"
-version = "0.13.4"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-std",
  "cw-utils 0.13.4",

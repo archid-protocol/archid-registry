@@ -3,7 +3,7 @@ name = "archid-registry"
 version = "1.0.0"
 authors = [
   "johhonn <github.com/johhonn>",
-  "Drew Taylor <drew@chainofinsight.com>"
+  "Drew Taylor <drew.taylor@philabs.xyz>"
 ]
 edition = "2018"
 
@@ -54,8 +54,8 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
 cw-utils = "0.14.0"
 
-cw721-updatable = { path = "../cw721-updatable/packages/cw721-updatable", version = "0.13.4" }
-archid-token = { path = "../archid-token/", version = "0.1.0", features = ["library"] }
+cw721-updatable = { path = "../cw721-updatable/packages/cw721-updatable", version = "1.0.0" }
+archid-token = { path = "../archid-token/", version = "1.0.0", features = ["library"] }
 
 [dev-dependencies]
 cosmwasm-schema = "~1.0.0-beta"
