@@ -54,8 +54,8 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = "1.0"
 cw-utils = "0.14.0"
 
-cw721-updatable = { path = "../cw721-updatable/packages/cw721-updatable", version = "1.0.0" }
-archid-token = { path = "../archid-token/", version = "1.0.0", features = ["library"] }
+cw721-updatable = { git = "https://github.com/archid-protocol/cw721-updatable.git", version = "1.0.0" }
+archid-token = { git = "https://github.com/archid-protocol/archid-token.git", version = "1.0.0", features = ["library"] }
 
 [dev-dependencies]
 cosmwasm-schema = "~1.0.0-beta"

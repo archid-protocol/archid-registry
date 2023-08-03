@@ -40,6 +40,7 @@ dependencies = [
 [[package]]
 name = "archid-token"
 version = "1.0.0"
+source = "git+https://github.com/archid-protocol/archid-token.git#83eac5bbc414b4799f565547999b39b25c293765"
 dependencies = [
  "cosmwasm-std",
  "cw2 0.11.1",
@@ -358,7 +359,8 @@ dependencies = [
 
 [[package]]
 name = "cw721-archid"
-version = "1.0.0"
+version = "1.0.1"
+source = "git+https://github.com/archid-protocol/cw721-updatable.git#c62511b4e90e75f32403bdff7f7b6d4b1d5577ee"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 0.13.4",
@@ -373,6 +375,7 @@ dependencies = [
 [[package]]
 name = "cw721-updatable"
 version = "1.0.0"
+source = "git+https://github.com/archid-protocol/cw721-updatable.git#c62511b4e90e75f32403bdff7f7b6d4b1d5577ee"
 dependencies = [
  "cosmwasm-std",
  "cw-utils 0.13.4",
