@@ -1,12 +1,12 @@
 [package]
 name = "archid-registry"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
   "johhonn <johhonn@users.noreply.github.com>",
   "Drew Taylor <drew.taylor@philabs.xyz>",
 ]
 edition = "2018"
-description = "ArchID cw721 token collection contract (AID)"
+description = "ArchID name service registry contract"
 keywords = ["ArchID", "CosmWasm"]
 repository = "https://github.com/archid-protocol/archid-registry"
 homepage = "https://archid.app"
