@@ -1,6 +1,6 @@
 [package]
 name = "archid-registry"
-version = "1.0.1"
+version = "1.0.2"
 authors = [
   "johhonn <johhonn@users.noreply.github.com>",
   "Drew Taylor <drew.taylor@philabs.xyz>",
@@ -10,7 +10,7 @@ description = "ArchID name service registry contract"
 keywords = ["ArchID", "CosmWasm"]
 repository = "https://github.com/archid-protocol/archid-registry"
 homepage = "https://archid.app"
-documentation = "https://docs.archid.app"
+documentation = "https://docs.rs/archid-registry/latest/archid_registry"
 license = "Apache-2.0"
 
 exclude = [
